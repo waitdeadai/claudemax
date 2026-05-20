@@ -2,6 +2,14 @@
 
 claudemax runs autonomous AI agents that read your filesystem, run shell commands, edit files, fetch web pages, and spawn parallel subprocesses. Treat it accordingly.
 
+## Subscription compliance (Anthropic April 4 2026 third-party block — claudemax is unaffected)
+
+In April 2026 Anthropic [briefly blocked third-party agent frameworks](https://thenextweb.com/news/anthropic-openclaw-claude-subscription-ban-cost) (OpenClaw, claude-flow, others) from piping Pro/Max subscription limits through programmatic tools. The policy was [reversed](https://www.datagrom.com/ai-news/anthropic-reverses-ban-on-third-party-ai-agent-use-8ec3aaa6) when Anthropic introduced a separate **Agent SDK credit subcategory** on Pro/Max plans (Pro $20, Max5x $100, Max20x $200) specifically allocated for programmatic uses including external tools.
+
+**claudemax routes 100% of provider calls through `@anthropic-ai/claude-agent-sdk` `query()`**. Those calls bill against the Agent SDK credit pool, NOT the interactive usage limit. This is the compliant, supported path per the [June 15 2026 billing split docs](https://help.apiyi.com/en/anthropic-claude-subscription-agent-sdk-billing-split-june-2026-en.html). The `cmax doctor` command surfaces which billing path is active.
+
+Users opt into the API-key billing path (`CMAX_PLAN=api` or `ANTHROPIC_API_KEY` set in env) explicitly. Default is subscription via Agent SDK credit.
+
 ## Threat model — what claudemax does and doesn't do
 
 | Action | Default behavior |

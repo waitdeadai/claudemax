@@ -2,6 +2,33 @@
 
 All notable changes to claudemax. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **`packages/core/src/models.ts` pricing correction.** Opus 4.7 is **$5 input / $25 output per MTok** (verified 2026-05-20 against [Anthropic's models overview](https://platform.claude.com/docs/en/about-claude/models/overview)). v0.2.0 had the legacy Opus 4.5 prices baked in ($15/$75) — a 3× overestimate of Opus cost. Sonnet 4.6 ($3/$15) and Haiku 4.5 ($1/$5) were already correct. Per-packet cost estimates and plan-aware demote thresholds are now accurate.
+- Context windows updated: Opus 4.7 = 1M, Sonnet 4.6 = 1M, Haiku 4.5 = 200k.
+- Max output updated: Opus 4.7 = 128k, Sonnet 4.6 = 64k, Haiku 4.5 = 64k.
+
+### Added
+
+- Prompt-caching pricing constants per tier: `cacheWrite5mPer1MUsd` (1.25× base input), `cacheWrite1hPer1MUsd` (2× base input), `cachedInputPer1MUsd` (0.1× base input) per [Anthropic prompt caching docs](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
+- `cacheStatsFromUsage(tier, usage)` helper in `packages/core/src/cost.ts` — surfaces hit rate, billed input, and $ saved vs counterfactual no-cache cost. Foundation for `cmax memory credit` cache-aware reporting.
+- `AgentResult` gains `cacheReadTokens` and `cacheWriteTokens` optional fields.
+- `estimatePacketCost` now assumes 50% of static input is cached on subsequent turns (per Anthropic's caching docs hit-rate guidance), giving more realistic estimates for multi-turn workflows.
+- `docs/SOTA_2026.md` — live-research synthesis comparing claudemax to Anthropic Agent Teams, Ruflo (formerly claude-flow, 31k stars), wshobson/agents, Forge, Composio AO, and the broader 2026 multi-agent ecosystem. Includes adopted-vs-not SDK option matrix and open research questions.
+- `SECURITY.md` subscription-compliance section — explicit note that claudemax routes through the Agent SDK credit pool, unaffected by the [April 4 2026 OpenClaw block](https://thenextweb.com/news/anthropic-openclaw-claude-subscription-ban-cost) which Anthropic [reversed](https://www.datagrom.com/ai-news/anthropic-reverses-ban-on-third-party-ai-agent-use-8ec3aaa6).
+- `packages/core/tests/cache.test.ts` — 11 new tests covering verified pricing constants, cache-stats math, and cost-with-cache-writes arithmetic.
+
+### Known follow-ups (tracked in `docs/SOTA_2026.md`)
+
+- `effort: 'xhigh'` should become the runtime default (Anthropic's recommended default for Opus 4.7 coding); currently `'max'` per the user's "max effort" preference.
+- `thinking: { type: 'adaptive' }` is off by default on Opus 4.7 — claudemax should explicitly opt in for verify/spec/architect roles.
+- `betas: ['task-budgets-2026-03-13']` + `taskBudget: { total }` — Opus 4.7 advisory token budget (model is aware of countdown). Maps to `--budget-credits` flag conceptually; wire as opt-in flag.
+- `includeHookEvents: true`, `strictMcpConfig: true`, `sessionStoreFlush: 'eager'` — Claude Agent SDK May 2026 additions; relevant to Mode B agent-teams live-tailing.
+- `cmax memory credit` should surface cache hit rate from `cacheStatsFromUsage`.
+- Document recommended MCP servers (Figma, Vercel, Supabase, Playwright, Slack) per the [Claude Code plugin marketplace](https://claude.com/plugins).
+
 ## [0.2.0] — 2026-05-20
 
 Major rewrite: Anthropic-only, multispec engine as the default daily-driver, two parallelism modes (SDK subagents + Claude Code Agent Teams), plan-aware cost-guard tuned for Claude Max subscribers, taste auto-bootstrap via /deepresearch, full remote-from-phone operation stack.

@@ -123,6 +123,8 @@ export interface AgentResult {
   readonly evidence: readonly string[];
   readonly tokensIn: number;
   readonly tokensOut: number;
+  readonly cacheReadTokens?: number;
+  readonly cacheWriteTokens?: number;
   readonly costUsd: number;
   readonly durationMs: number;
   readonly tier: ModelTier;
