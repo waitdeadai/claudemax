@@ -15,7 +15,6 @@ dist/
 **/.no-amnesia/
 **/memory.sqlite
 **/memory.sqlite-*
-**/setup.sh.sha256
 coverage/
 .turbo/
 
