@@ -17,6 +17,7 @@ import { configCommand } from "./commands/config.js";
 import { bgCommand } from "./commands/bg.js";
 import { updateCommand } from "./commands/update.js";
 import { askCommand } from "./commands/ask.js";
+import { tddCommand } from "./commands/tdd.js";
 
 const program = new Command();
 
@@ -35,6 +36,7 @@ program.addCommand(specCommand());
 program.addCommand(routeCommand());
 program.addCommand(goalCommand());
 program.addCommand(verifyCommand());
+program.addCommand(tddCommand());
 program.addCommand(dispatchCommand());
 program.addCommand(memoryCommand());
 program.addCommand(configCommand());

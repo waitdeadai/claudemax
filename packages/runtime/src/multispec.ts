@@ -37,6 +37,16 @@ const MULTISPEC_JSON_SCHEMA = {
                 id: { type: "string" },
                 description: { type: "string" },
                 verifyHint: { type: "string" },
+                interactive: {
+                  type: "object",
+                  required: ["tool", "script"],
+                  properties: {
+                    tool: { type: "string", enum: ["playwright", "browser", "shell"] },
+                    script: { type: "string" },
+                    timeoutMs: { type: "number" },
+                    expect: { type: "string" },
+                  },
+                },
               },
             },
           },
@@ -66,6 +76,16 @@ const MULTISPEC_JSON_SCHEMA = {
           id: { type: "string" },
           description: { type: "string" },
           verifyHint: { type: "string" },
+          interactive: {
+            type: "object",
+            required: ["tool", "script"],
+            properties: {
+              tool: { type: "string", enum: ["playwright", "browser", "shell"] },
+              script: { type: "string" },
+              timeoutMs: { type: "number" },
+              expect: { type: "string" },
+            },
+          },
         },
       },
     },

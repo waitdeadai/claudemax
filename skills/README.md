@@ -31,11 +31,12 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/spec` | Author a single SPEC.md with measurable completion conditions |
 | `/specqa` | Spec quality gate — every verifyHint must be mechanically checkable |
 
-### Execution (4)
+### Execution (5)
 
 | Skill | Purpose |
 |---|---|
 | `/goal` | Autonomous /goal loop wrapping Claude Code's native validator-loop |
+| `/tdd` | Strict write-failing-test-first → implement → verify-passes cycle. Opt-in via `cmax ask "<goal>" --tdd` |
 | `/parallel` | Distinct-packet fan-out (DispatchPlan) |
 | `/hive` | Same problem N times → merge proposals |
 | `/council` | 3-Opus adversarial debate (proposer / critic / judge) |
@@ -63,15 +64,16 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/taste` | Auto-bootstrap via /deepresearch (NO 10 questions) |
 | `/deepretaste` | Drift detection vs current code |
 
-### Infrastructure (3)
+### Infrastructure (4)
 
 | Skill | Purpose |
 |---|---|
 | `/agentfactory` | Governed AgentDefinition creation + Hermes-style registry |
 | `/route` | Inspect or override the model-routing decision |
 | `/agentteams` | Manual invocation of Mode B (Claude Code Agent Teams) |
+| `/harness-audit` | Periodic review of claudemax's own scaffolding against current Opus capability |
 
-## Total: 26 skills (4 + 5 + 2 + 4 + 3 + 3 + 2 + 3)
+## Total: 28 skills (5 + 5 + 2 + 5 + 3 + 3 + 2 + 4 minus 1 alias overlap)
 
 Lean, audited for overlap. Cuts vs v1's 43-skill catalog: MiniMax-specific skills dropped entirely; /webresearch merged into /deepresearch; /autoplan into the multispec engine; /qa into /verify; /digestaste + /digestflow are internal runtime functions; /tastebootstrap replaced by auto-bootstrap /taste; product-specific skills (/defineicp /icpweek /claudeproduct etc.) deferred.
 

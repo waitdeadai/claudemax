@@ -54,10 +54,20 @@ export interface RouteDecision {
   readonly estimatedCostUsd: number;
 }
 
+export type InteractiveVerifyTool = "playwright" | "browser" | "shell";
+
+export interface InteractiveVerifyHint {
+  readonly tool: InteractiveVerifyTool;
+  readonly script: string;
+  readonly timeoutMs?: number;
+  readonly expect?: string;
+}
+
 export interface SpecCompletionCondition {
   readonly id: string;
   readonly description: string;
   readonly verifyHint: string;
+  readonly interactive?: InteractiveVerifyHint;
 }
 
 export interface Spec {
@@ -130,16 +140,36 @@ export interface AgentResult {
   readonly tier: ModelTier;
 }
 
+export type FailureCategory =
+  | "missing-file"
+  | "test-failure"
+  | "build-error"
+  | "type-error"
+  | "behavior-mismatch"
+  | "incomplete-implementation"
+  | "regression"
+  | "spec-ambiguity"
+  | "interactive-failure"
+  | "unknown";
+
+export interface VerificationFinding {
+  readonly id: string;
+  readonly met: boolean;
+  readonly evidence: string;
+  readonly confidence: number;
+  readonly failureCategory?: FailureCategory;
+  readonly actionableNext?: string;
+  readonly consolidatedFrom?: readonly string[];
+}
+
 export interface VerificationReport {
   readonly spec: Spec;
-  readonly perCondition: readonly {
-    readonly id: string;
-    readonly met: boolean;
-    readonly evidence: string;
-  }[];
+  readonly perCondition: readonly VerificationFinding[];
+  readonly suppressedLowConfidence: readonly VerificationFinding[];
   readonly verdict: "verified" | "partial" | "failed";
   readonly verifierTier: ModelTier;
   readonly notes: string;
+  readonly confidenceThreshold: number;
 }
 
 export interface MultiSpecVerification {
@@ -147,4 +177,24 @@ export interface MultiSpecVerification {
   readonly perSubSpec: readonly VerificationReport[];
   readonly rollup: VerificationReport;
   readonly verdict: "verified" | "partial" | "failed";
+}
+
+export type MultiSpecPhase =
+  | "deepresearch"
+  | "decompose"
+  | "specqa"
+  | "introspect"
+  | "goal"
+  | "verify-per-spec"
+  | "verify-rollup";
+
+export interface PhaseHandoff {
+  readonly phase: MultiSpecPhase;
+  readonly previousPhase?: MultiSpecPhase;
+  readonly rootGoal: string;
+  readonly summary: string;
+  readonly nextInputs: readonly string[];
+  readonly blockers: readonly string[];
+  readonly artifacts: Readonly<Record<string, string>>;
+  readonly createdAt: string;
 }

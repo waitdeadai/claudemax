@@ -34,6 +34,8 @@ export function askCommand(): Command {
     .option("--mode <mode>", "auto | solo | teams", "auto")
     .option("--no-research", "skip /deepresearch (smaller / simpler goals)")
     .option("--no-verify", "skip independent verification step")
+    .option("--tdd", "enforce write-failing-test-first per sub-Spec where a test verifyHint exists", false)
+    .option("--confidence <n>", "verifier confidence threshold for primary findings (0..1)", "0.8")
     .option("--memory <path>", "memory db path", ".claudemax/memory.sqlite")
     .action(async (goal: string, opts: Record<string, unknown>) => {
       const cwd = process.cwd();
@@ -62,18 +64,14 @@ export function askCommand(): Command {
       );
       console.log();
 
-      // Hand off to the actual run command's action.
       const runCmd = runCommand();
-      // commander API: parse a synthetic argv that delegates to runCmd.
       const argv = ["node", "cmax", "run", goal];
       for (const [k, v] of Object.entries(opts)) {
         if (typeof v === "boolean") {
-          // commander negates --no-research as research:false; reconstruct
           if (k === "research" && v === false) argv.push("--no-research");
           else if (k === "verify" && v === false) argv.push("--no-verify");
-          // other booleans not currently exposed as negatable
+          else if (k === "tdd" && v === true) argv.push("--tdd");
         } else if (v !== undefined) {
-          // map back to flag form
           const flag = k.replace(/([A-Z])/g, "-$1").toLowerCase();
           argv.push(`--${flag}`, String(v));
         }

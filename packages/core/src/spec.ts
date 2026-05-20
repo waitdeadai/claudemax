@@ -1,10 +1,18 @@
 import { z } from "zod";
 import type { Spec, SpecCompletionCondition } from "./types.js";
 
+const interactiveVerifyHintSchema = z.object({
+  tool: z.enum(["playwright", "browser", "shell"]),
+  script: z.string(),
+  timeoutMs: z.number().int().positive().optional(),
+  expect: z.string().optional(),
+});
+
 const completionConditionSchema = z.object({
   id: z.string(),
   description: z.string(),
   verifyHint: z.string(),
+  interactive: interactiveVerifyHintSchema.optional(),
 });
 
 const specSchema = z.object({

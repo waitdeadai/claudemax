@@ -25,12 +25,24 @@ function verification(
   title: string,
   verdict: "verified" | "partial" | "failed",
 ): VerificationReport {
+  const met = verdict === "verified";
   return {
     spec: spec(title),
-    perCondition: [{ id: `${title}-cc1`, met: verdict === "verified", evidence: "x" }],
+    perCondition: [
+      {
+        id: `${title}-cc1`,
+        met,
+        evidence: "x",
+        confidence: 0.95,
+        failureCategory: met ? undefined : "unknown",
+        actionableNext: met ? undefined : "re-run goal",
+      },
+    ],
+    suppressedLowConfidence: [],
     verdict,
     verifierTier: "opus",
     notes: "",
+    confidenceThreshold: 0.8,
   };
 }
 

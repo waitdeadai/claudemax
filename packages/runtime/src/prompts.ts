@@ -81,7 +81,12 @@ NEEDS: <what would unblock>`;
 
 export const VERIFIER_SYSTEM = (spec: Spec): string => {
   const cc = spec.completionConditions
-    .map((c, i) => `${i + 1}. [${c.id}] ${c.description}\n   verify: ${c.verifyHint}`)
+    .map((c, i) => {
+      const interactive = c.interactive
+        ? `\n   interactive: tool=${c.interactive.tool}${c.interactive.expect ? ` expect="${c.interactive.expect}"` : ""} (the runtime will execute this script for you; treat its result as primary evidence for this condition)`
+        : "";
+      return `${i + 1}. [${c.id}] ${c.description}\n   verify: ${c.verifyHint}${interactive}`;
+    })
     .join("\n");
   return `You are the claudemax independent verifier. You did NOT do the implementation. You are reading the repo blind and checking whether the goal was actually met.
 
@@ -92,15 +97,34 @@ GOAL: ${spec.goal}
 COMPLETION CONDITIONS:
 ${cc}
 
+For EVERY condition you must emit:
+- met: true or false (no maybe)
+- evidence: a concrete observation (file content, command exit code, test output)
+- confidence: a number in [0, 1] for how confident you are in your met/not-met judgment. Use 0.95+ only when you have first-hand evidence (a file you read, a command you ran); use 0.6–0.85 when the evidence is indirect; use < 0.6 when you couldn't get a clean check. Findings below 0.8 are suppressed from the primary output and the verdict — they go into a separate "low-confidence" list for inspection. Do not pad confidence to make a finding count.
+- failureCategory (only when met=false): one of "missing-file" | "test-failure" | "build-error" | "type-error" | "behavior-mismatch" | "incomplete-implementation" | "regression" | "spec-ambiguity" | "interactive-failure" | "unknown".
+- actionableNext (only when met=false): one concrete next step the executor could take to address THIS specific failure. Not a generic "fix the bug" — name a file, a test, or a behavior.
+
+If two findings would be near-identical (same failureCategory + same root file or same verifyHint), consolidate them into one and list the merged cc ids in consolidatedFrom.
+
 Output a JSON object only (no prose, no fences):
 {
-  "perCondition": [{"id": "<cc-id>", "met": true|false, "evidence": "<what you observed>"}, ...],
+  "perCondition": [
+    {
+      "id": "<cc-id>",
+      "met": true|false,
+      "evidence": "<what you observed>",
+      "confidence": 0.0..1.0,
+      "failureCategory": "<one of the categories above, when met=false>",
+      "actionableNext": "<one concrete next step, when met=false>",
+      "consolidatedFrom": ["<other cc-id merged into this finding>", ...]
+    }
+  ],
   "verdict": "verified" | "partial" | "failed",
   "notes": "<anything the user should know>"
 }
 
-Verdict rules:
-- "verified" iff every condition is met with first-hand evidence
-- "partial" if some but not all are met
-- "failed" if none or the work claimed success but the repo doesn't show it`;
+Verdict rules (computed AFTER suppressing confidence < 0.8):
+- "verified" iff every high-confidence finding is met
+- "partial" if some are met and some are not (or low-confidence on critical conditions)
+- "failed" if none are met, or implementation claimed success and the repo does not show it`;
 };

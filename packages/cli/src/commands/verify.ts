@@ -9,11 +9,13 @@ export function verifyCommand(): Command {
   return new Command("verify")
     .description("Independent Opus supervisor verifies SPEC was met")
     .argument("[spec]", "path to SPEC.md", "SPEC.md")
-    .action(async (specPath: string) => {
+    .option("--confidence <n>", "confidence threshold for primary findings (0..1)", "0.8")
+    .action(async (specPath: string, opts: { confidence: string }) => {
       const md = readFileSync(resolve(process.cwd(), specPath), "utf8");
       const spec = parseSpecMarkdown(md);
-      console.log(kleur.cyan(`→ verifying ${spec.title} with blind Opus pass...`));
-      const report = await verify(spec);
+      const confidenceThreshold = Number(opts.confidence);
+      console.log(kleur.cyan(`→ verifying ${spec.title} with blind Opus pass (threshold ${confidenceThreshold})...`));
+      const report = await verify(spec, { confidenceThreshold });
       const color =
         report.verdict === "verified"
           ? kleur.green
@@ -23,7 +25,30 @@ export function verifyCommand(): Command {
       console.log(color(`\n${report.verdict.toUpperCase()}`));
       for (const c of report.perCondition) {
         const sym = c.met ? kleur.green("✓") : kleur.red("✗");
-        console.log(`  ${sym} ${kleur.cyan(c.id)} — ${c.evidence}`);
+        const conf = kleur.dim(`(conf ${c.confidence.toFixed(2)})`);
+        const merged = c.consolidatedFrom?.length
+          ? kleur.dim(` [+${c.consolidatedFrom.length} merged]`)
+          : "";
+        console.log(`  ${sym} ${kleur.cyan(c.id)} ${conf}${merged} — ${c.evidence}`);
+        if (!c.met) {
+          console.log(
+            kleur.dim(
+              `      category: ${c.failureCategory ?? "?"}  next: ${c.actionableNext ?? "—"}`,
+            ),
+          );
+        }
+      }
+      if (report.suppressedLowConfidence.length) {
+        console.log(
+          kleur.dim(
+            `\n${report.suppressedLowConfidence.length} suppressed finding(s) below threshold ${report.confidenceThreshold}:`,
+          ),
+        );
+        for (const f of report.suppressedLowConfidence) {
+          console.log(
+            kleur.dim(`  · ${f.id} (conf ${f.confidence.toFixed(2)}) ${f.met ? "would-pass" : "would-fail"} — ${f.evidence}`),
+          );
+        }
       }
       if (report.notes) console.log(kleur.dim(`\nnotes: ${report.notes}`));
       process.exit(report.verdict === "verified" ? 0 : 1);

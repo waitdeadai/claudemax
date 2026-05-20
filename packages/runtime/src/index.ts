@@ -13,3 +13,6 @@ export * from "./council.js";
 export * from "./agent-factory.js";
 export * from "./overnight.js";
 export * from "./sdk-options.js";
+export * from "./handoff.js";
+export * from "./interactive-verify.js";
+export * from "./tdd.js";

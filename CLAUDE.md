@@ -18,14 +18,14 @@ Monorepo with pnpm workspaces:
 - `packages/runtime` — `@anthropic-ai/claude-agent-sdk` `query()` wrappers: orchestrator (Mode A subagents), agent-teams (Mode B), /goal driver, verifier, spec writer, multispec engine, deepresearch, taste, hive, council, agent-factory, overnight, billing.
 - `packages/memory` — SQLite+FTS5 store with research_sources, taste_history, sub_specs tables. JSON snapshots.
 - `packages/cli` — `cmax` binary (commander). New v0.2 commands: doctor, taste, overnight, research, config.
-- `skills/` — Claude Code skill bundle (26 skills, audited for overlap).
+- `skills/` — Claude Code skill bundle (28 skills, audited for overlap; v0.2.1 added `/tdd` + `/harness-audit` as effectiveness adoptions from Anthropic's harness-design guide and Affaan's production patterns).
 - `.claude/hooks/` — SessionStart, Stop, PostToolUse hooks.
 - `docs/` — architecture, multispec, parallelism, agent-teams, model routing, goal pipeline, workflow variants, skill catalog, taste auto-bootstrap, v1 → v2 migration, quickstart.
 
 ## Working rules (apply to changes in this repo)
 
 1. **No new providers.** Anthropic-only by design. If a task wants MiniMax or OpenAI, push back.
-2. **Lean catalog.** 26 skills, audited for overlap. Before adding a new skill, check `docs/SKILL_CATALOG.md` overlap audit checklist.
+2. **Lean catalog.** 28 skills, audited for overlap. v0.2.1 added `/tdd` (test-first cycle enforcement, sourced from Affaan's production-validated TDD skill) and `/harness-audit` (periodic scaffolding-vs-current-Opus review, sourced from Anthropic's harness-design guide). Before adding a new skill, check `docs/SKILL_CATALOG.md` overlap audit checklist AND justify against the existing 28 — `/harness-audit` itself is the long-run forcing function for subtraction.
 3. **Router defaults are sacred.** Changing baselines changes the harness's identity. Discuss before editing `packages/core/src/router.ts`.
 4. **`/verify` and `/spec` and `/architect` always run on Opus.** Never demote them, even with `--cheap` or past 70/90/95% monthly credit.
 5. **Multispec is the default.** Every umbrella auto-runs deepresearch + multispec + parallel /goal + verify. No `--multi` flag. Single-spec mode is an internal engine optimization.
