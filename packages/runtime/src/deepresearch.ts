@@ -72,7 +72,7 @@ export async function deepResearch(
         append: RESEARCH_SYSTEM(now),
       },
       allowedTools: ["WebSearch", "WebFetch", "Read", "Glob", "Grep"],
-      permissionMode: "default",
+      permissionMode: "bypassPermissions",
       maxTurns: opts.maxTurns ?? 25,
       cwd: opts.cwd,
       settingSources: ["user", "project"],

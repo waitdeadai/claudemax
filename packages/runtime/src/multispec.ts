@@ -122,7 +122,7 @@ export async function decomposeIntoMultiSpec(
         append: MULTISPEC_DECOMPOSER_SYSTEM,
       },
       allowedTools: ["Read", "Glob", "Grep"],
-      permissionMode: "default",
+      permissionMode: "bypassPermissions",
       maxTurns: 30,
       cwd: opts.cwd,
       settingSources: ["user", "project"],

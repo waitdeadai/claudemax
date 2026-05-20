@@ -69,7 +69,7 @@ export async function writeSpec(goal: string, opts: SpecWriteOptions = {}): Prom
         append: SPEC_WRITER_SYSTEM,
       },
       allowedTools: ["Read", "Glob", "Grep"],
-      permissionMode: "default",
+      permissionMode: "bypassPermissions",
       maxTurns: 20,
       cwd: opts.cwd,
       settingSources: ["user", "project"],

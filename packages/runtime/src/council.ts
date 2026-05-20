@@ -61,7 +61,7 @@ async function runRole(
         append: `You are acting as the ${role} in a 3-Opus adversarial council. Stay in role.`,
       },
       allowedTools: ["Read", "Glob", "Grep", "WebSearch", "WebFetch"],
-      permissionMode: "default",
+      permissionMode: "bypassPermissions",
       maxTurns,
       cwd,
       settingSources: ["user", "project"],

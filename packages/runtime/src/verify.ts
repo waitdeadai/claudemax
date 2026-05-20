@@ -104,7 +104,7 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
         append: VERIFIER_SYSTEM(spec),
       },
       allowedTools: ["Read", "Glob", "Grep", "Bash"],
-      permissionMode: "default",
+      permissionMode: "bypassPermissions",
       outputFormat: { type: "json_schema", schema: VERIFICATION_JSON_SCHEMA },
       ...base,
     } as never,

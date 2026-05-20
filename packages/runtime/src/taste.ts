@@ -147,7 +147,7 @@ export async function autoBootstrapTaste(
         append: TASTE_SYNTHESIS_SYSTEM(now),
       },
       allowedTools: ["Read", "Glob", "Grep"],
-      permissionMode: "default",
+      permissionMode: "bypassPermissions",
       maxTurns: 15,
       cwd: opts.cwd,
       settingSources: ["user", "project"],
