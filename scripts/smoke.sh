@@ -143,8 +143,11 @@ if [ -f "$TMP/proj3/.claudemax/plan-detection.json" ]; then ok "init writes plan
 else fail "init writes plan-detection.json" "missing"
 fi
 SKILL_COUNT=$(find "$TMP/proj3/.claude/skills" -maxdepth 1 -mindepth 1 -type d | wc -l)
-if [ "$SKILL_COUNT" -ge 26 ]; then ok "init copies ≥26 skills (got $SKILL_COUNT)"
-else fail "init copies ≥26 skills" "got $SKILL_COUNT"
+if [ "$SKILL_COUNT" -ge 27 ]; then ok "init copies ≥27 skills (got $SKILL_COUNT)"
+else fail "init copies ≥27 skills" "got $SKILL_COUNT"
+fi
+if [ -f "$TMP/proj3/.claude/skills/ask/SKILL.md" ]; then ok "init writes /ask skill (ask-and-achieve entry)"
+else fail "init writes /ask skill" "missing"
 fi
 
 echo
