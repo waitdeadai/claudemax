@@ -6,7 +6,8 @@ Apache-2.0 (same as the project). Use freely; attribution appreciated.
 
 | File | Use |
 |---|---|
-| `claudemax.png` | **The official claudemax mascot.** Pixel-art electric-cyan creature with two eyes and 8-directional spike protrusions. Transparent background. Use as README hero, GitHub social card, project icon, favicon. |
+| `og-image.png` | **GitHub social-preview / Open Graph card.** 1774 × 887 (2:1), mascot + `claudemax` wordmark + tagline on deep-ink background. Upload via GitHub Settings → General → Social preview. Also used as the README hero. |
+| `claudemax.png` | **The official claudemax mascot.** Pixel-art electric-cyan creature with two eyes and 8-directional spike protrusions. Transparent background. Use as project icon, favicon, avatar — anywhere the wordmark would be redundant. |
 | `README.md` | This file — palette + usage notes. |
 
 ## Mascot
@@ -41,8 +42,10 @@ In markdown (project README hero):
 As GitHub social card (Open Graph):
 
 ```html
-<meta property="og:image" content="https://raw.githubusercontent.com/waitdeadai/claudemax/main/assets/claudemax.png" />
+<meta property="og:image" content="https://raw.githubusercontent.com/waitdeadai/claudemax/main/assets/og-image.png" />
 ```
+
+For GitHub's repo-level social preview (the actual image rendered when the repo URL is shared on Twitter/X, Slack, Discord, LinkedIn), upload `assets/og-image.png` manually via **Settings → General → Social preview**. The `<meta>` tag above is only honored on third-party pages that reference `raw.githubusercontent.com` directly.
 
 As favicon:
 
