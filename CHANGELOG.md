@@ -20,14 +20,23 @@ All notable changes to claudemax. Format loosely follows [Keep a Changelog](http
 - `SECURITY.md` subscription-compliance section — explicit note that claudemax routes through the Agent SDK credit pool, unaffected by the [April 4 2026 OpenClaw block](https://thenextweb.com/news/anthropic-openclaw-claude-subscription-ban-cost) which Anthropic [reversed](https://www.datagrom.com/ai-news/anthropic-reverses-ban-on-third-party-ai-agent-use-8ec3aaa6).
 - `packages/core/tests/cache.test.ts` — 11 new tests covering verified pricing constants, cache-stats math, and cost-with-cache-writes arithmetic.
 
-### Known follow-ups (tracked in `docs/SOTA_2026.md`)
+### Added — SOTA SDK alignment (all 7 follow-ups landed)
 
-- `effort: 'xhigh'` should become the runtime default (Anthropic's recommended default for Opus 4.7 coding); currently `'max'` per the user's "max effort" preference.
-- `thinking: { type: 'adaptive' }` is off by default on Opus 4.7 — claudemax should explicitly opt in for verify/spec/architect roles.
-- `betas: ['task-budgets-2026-03-13']` + `taskBudget: { total }` — Opus 4.7 advisory token budget (model is aware of countdown). Maps to `--budget-credits` flag conceptually; wire as opt-in flag.
-- `includeHookEvents: true`, `strictMcpConfig: true`, `sessionStoreFlush: 'eager'` — Claude Agent SDK May 2026 additions; relevant to Mode B agent-teams live-tailing.
-- `cmax memory credit` should surface cache hit rate from `cacheStatsFromUsage`.
-- Document recommended MCP servers (Figma, Vercel, Supabase, Playwright, Slack) per the [Claude Code plugin marketplace](https://claude.com/plugins).
+- `packages/runtime/src/sdk-options.ts` — centralized `baseSdkOptions()` builder + `EffortLevel` type + `estimateTaskBudgetTokens()` + `parseUsageWithCache()`. All `query()` call sites now spread the baseline through one helper so the SDK option set stays consistent.
+- **`effort: 'xhigh'` is the new default** (Anthropic's recommended setting for Opus 4.7 coding per [release notes](https://platform.claude.com/docs/en/about-claude/models/whats-new-claude-4-7)). Users can still override to `'max'` via the runtime `effort` option or `--effort max` CLI flag.
+- **`thinking: { type: 'adaptive' }` opt-in for reasoning roles.** Opus 4.7 ships adaptive thinking OFF by default. claudemax now explicitly enables it for `goal`, `verify`, and any opus-tier packet in the orchestrator.
+- **`task_budget` beta wired.** When `maxBudgetUsd` is set, the runtime auto-computes a corresponding `task_budget.total` (per-tier token estimate) and sends it alongside the `task-budgets-2026-03-13` beta header. The model is AWARE of the budget countdown and self-paces — distinct from `maxBudgetUsd` which is a hard cap.
+- **Opt-in SDK options exposed via `baseSdkOptions()`**: `includeHookEvents`, `strictMcpConfig`, `sessionStoreFlush: 'eager'` (the last enables near-real-time transcript mirror for live-tailing Mode B agent-teams).
+- **Cache token tracking end-to-end.** `parseUsageWithCache()` extracts `cache_read_input_tokens` and `cache_creation.ephemeral_5m/1h_input_tokens` from result messages. `AgentResult` and `GoalRunResult` propagate `cacheReadTokens` / `cacheWriteTokens`. `RunRecord` persists them. `memory.runs` schema gains `cache_read_tokens` and `cache_write_tokens` columns (with idempotent forward migration for existing DBs).
+- **`cmax memory credit` subcommand.** Shows current-period Agent SDK credit consumption (`formatPlanBudgetState`) AND prompt cache hit rate (`cacheStatsThisPeriod`). Warns if hit rate < 30% on > 100k input tokens (likely [SDK caching bug #188](https://github.com/anthropics/claude-agent-sdk-typescript/issues/188)).
+- **PACKET_AGENT_SYSTEM prompt updated** with explicit fan-out instruction. Opus 4.7's "fewer subagents spawned by default" behavior would otherwise serialize work; workers are now told to invoke the Agent tool multiple times in one assistant turn for parallel execution.
+- **`docs/MCP_SERVERS.md`** — recommended MCP server configs for software-engineering power users: Playwright, Vercel, Supabase, GitHub, Figma, Slack, Postgres. Includes anti-recommendations and notes on `strictMcpConfig`.
+
+### Tests
+
+- `pnpm test` → 83 unit tests (44 core + 6 memory + 33 runtime).
+- `bash scripts/smoke.sh` → 90 smoke checks (added 3 for `memory credit` subcommand).
+- All green locally; CI green on push.
 
 ## [0.2.0] — 2026-05-20
 

@@ -1,13 +1,19 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { MODELS, type Spec } from "@claudemax/core";
 import { GOAL_DRIVER_SYSTEM } from "./prompts.js";
+import {
+  baseSdkOptions,
+  estimateTaskBudgetTokens,
+  parseUsageWithCache,
+  type EffortLevel,
+} from "./sdk-options.js";
 
 export interface GoalRunOptions {
   readonly cwd?: string;
   readonly maxTurns?: number;
   readonly maxBudgetUsd?: number;
   readonly permissionMode?: "default" | "acceptEdits" | "plan" | "bypassPermissions" | "auto";
-  readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
+  readonly effort?: EffortLevel;
   readonly onTurn?: (turn: number, snippet: string) => void;
   readonly env?: Record<string, string>;
   readonly abortSignal?: AbortSignal;
@@ -21,6 +27,8 @@ export interface GoalRunResult {
   readonly turns: number;
   readonly tokensIn: number;
   readonly tokensOut: number;
+  readonly cacheReadTokens: number;
+  readonly cacheWriteTokens: number;
   readonly sessionId?: string;
 }
 
@@ -29,20 +37,30 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
   let turns = 0;
   let tokensIn = 0;
   let tokensOut = 0;
+  let cacheReadTokens = 0;
+  let cacheWriteTokens = 0;
   let finalResult = "";
   let sessionId: string | undefined;
 
-  const abortController = new AbortController();
-  if (opts.abortSignal) {
-    opts.abortSignal.addEventListener("abort", () => abortController.abort());
-  }
+  const base = baseSdkOptions({
+    cwd: opts.cwd,
+    env: opts.env,
+    maxTurns,
+    effort: opts.effort,
+    thinking: "adaptive", // Opus 4.7: adaptive thinking is off by default; we opt in for goal-loop reasoning
+    maxBudgetUsd: opts.maxBudgetUsd,
+    taskBudgetTokens:
+      opts.maxBudgetUsd !== undefined
+        ? estimateTaskBudgetTokens("opus", opts.maxBudgetUsd)
+        : undefined,
+    abortSignal: opts.abortSignal,
+  });
 
   for await (const message of query({
     prompt: `Pursue the goal in the system prompt. Begin by re-reading the SPEC carefully, then act. Stop only when every completion condition is met or you are genuinely blocked.`,
     options: {
       model: MODELS.opus.id,
       fallbackModel: MODELS.sonnet.id,
-      effort: opts.effort ?? "max",
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
@@ -60,16 +78,8 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
         "Agent",
       ],
       permissionMode: opts.permissionMode ?? "acceptEdits",
-      maxTurns,
-      maxBudgetUsd: opts.maxBudgetUsd,
-      cwd: opts.cwd,
-      env: opts.env,
-      settingSources: ["user", "project"],
-      skills: "all",
-      enableFileCheckpointing: true,
-      agentProgressSummaries: true,
-      abortController,
       resume: opts.resume,
+      ...base,
     } as never,
   })) {
     const m = message as {
@@ -77,7 +87,7 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
       subtype?: string;
       session_id?: string;
       result?: string;
-      usage?: { input_tokens?: number; output_tokens?: number };
+      usage?: unknown;
     };
     if (m.type === "system" && m.subtype === "init" && m.session_id) {
       sessionId = m.session_id;
@@ -89,8 +99,11 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
     if (m.type === "result" && typeof m.result === "string") {
       finalResult = m.result;
       if (m.usage) {
-        tokensIn += m.usage.input_tokens ?? 0;
-        tokensOut += m.usage.output_tokens ?? 0;
+        const stats = parseUsageWithCache(m.usage);
+        tokensIn += stats.inputTokens;
+        tokensOut += stats.outputTokens;
+        cacheReadTokens += stats.cacheReadTokens;
+        cacheWriteTokens += stats.cacheWrite5mTokens + stats.cacheWrite1hTokens;
       }
     }
   }
@@ -115,5 +128,15 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
     summary = blockedMatch[1]?.trim() ?? "";
   }
 
-  return { status, summary, evidence, turns, tokensIn, tokensOut, sessionId };
+  return {
+    status,
+    summary,
+    evidence,
+    turns,
+    tokensIn,
+    tokensOut,
+    cacheReadTokens,
+    cacheWriteTokens,
+    sessionId,
+  };
 }

@@ -107,6 +107,9 @@ echo "--- memory (SQLite-only, no network) ---"
 mkdir -p "$TMP/proj2" && cd "$TMP/proj2"
 assert_exit 0 "memory runs on empty store" $CMAX memory runs
 assert_exit 0 "memory search returns 0 hits on empty store" $CMAX memory search "anything"
+assert_exit 0 "memory credit on empty store" $CMAX memory credit
+assert_output_contains "monthly Agent SDK credit" "memory credit prints monthly section" $CMAX memory credit
+assert_output_contains "prompt cache" "memory credit prints cache section" $CMAX memory credit
 cd "$OLDPWD" || exit
 
 echo

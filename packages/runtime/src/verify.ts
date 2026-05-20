@@ -1,11 +1,13 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { MODELS, type Spec, type VerificationReport } from "@claudemax/core";
 import { VERIFIER_SYSTEM } from "./prompts.js";
+import { baseSdkOptions, parseUsageWithCache, type EffortLevel } from "./sdk-options.js";
 
 export interface VerifyOptions {
   readonly cwd?: string;
   readonly maxTurns?: number;
   readonly env?: Record<string, string>;
+  readonly effort?: EffortLevel;
 }
 
 const VERIFICATION_JSON_SCHEMA = {
@@ -32,11 +34,20 @@ const VERIFICATION_JSON_SCHEMA = {
 export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<VerificationReport> {
   let finalResult = "";
 
+  const base = baseSdkOptions({
+    cwd: opts.cwd,
+    env: opts.env,
+    maxTurns: opts.maxTurns ?? 40,
+    effort: opts.effort, // defaults to xhigh in baseSdkOptions
+    thinking: "adaptive", // verifier needs deliberate reasoning; opt in on Opus 4.7
+  });
+  // verifier should not checkpoint (read-only pass)
+  base["enableFileCheckpointing"] = false;
+
   for await (const message of query({
     prompt: `Verify the SPEC was met. Read the repo, run checks, then output the JSON object exactly as specified.`,
     options: {
       model: MODELS.opus.id,
-      effort: "max",
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
@@ -44,17 +55,16 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
       },
       allowedTools: ["Read", "Glob", "Grep", "Bash"],
       permissionMode: "default",
-      maxTurns: opts.maxTurns ?? 40,
-      cwd: opts.cwd,
-      env: opts.env,
-      settingSources: ["user", "project"],
-      enableFileCheckpointing: false,
       outputFormat: { type: "json_schema", schema: VERIFICATION_JSON_SCHEMA },
+      ...base,
     } as never,
   })) {
-    const m = message as { type?: string; result?: string };
+    const m = message as { type?: string; result?: string; usage?: unknown };
     if (m.type === "result" && typeof m.result === "string") {
       finalResult = m.result;
+      if (m.usage) {
+        void parseUsageWithCache(m.usage);
+      }
     }
   }
 

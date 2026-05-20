@@ -9,6 +9,7 @@ import {
   type Plan,
 } from "@claudemax/core";
 import { PACKET_AGENT_SYSTEM } from "./prompts.js";
+import { baseSdkOptions, parseUsageWithCache, type EffortLevel } from "./sdk-options.js";
 
 export interface DispatchOptions {
   readonly cwd?: string;
@@ -20,7 +21,7 @@ export interface DispatchOptions {
   readonly env?: Record<string, string>;
   readonly plan?: Plan;
   readonly creditConsumedUsd?: number;
-  readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
+  readonly effort?: EffortLevel;
 }
 
 export interface ParallelCap {
@@ -92,9 +93,21 @@ async function runPacket(
   const started = Date.now();
   let tokensIn = 0;
   let tokensOut = 0;
+  let cacheReadTokens = 0;
+  let cacheWriteTokens = 0;
   let summary = "";
   const evidence: string[] = [];
   let success = false;
+
+  const base = baseSdkOptions({
+    cwd: opts.cwd,
+    env: opts.env,
+    maxTurns: decision.maxTurns,
+    effort: opts.effort,
+    // Opus 4.7 ships "fewer subagents spawned by default"; nudge adaptive thinking
+    // for routes that escalate to opus so the model reasons before calling tools.
+    thinking: decision.tier === "opus" ? "adaptive" : undefined,
+  });
 
   try {
     for await (const message of query({
@@ -102,7 +115,6 @@ async function runPacket(
       options: {
         model: decision.model,
         fallbackModel: MODELS.sonnet.id,
-        effort: opts.effort ?? "max",
         systemPrompt: {
           type: "preset",
           preset: "claude_code",
@@ -110,22 +122,18 @@ async function runPacket(
         },
         allowedTools: [...decision.tools],
         permissionMode: opts.permissionMode ?? "default",
-        maxTurns: decision.maxTurns,
-        cwd: opts.cwd,
-        env: opts.env,
-        settingSources: ["user", "project"],
-        skills: "all",
-        enableFileCheckpointing: true,
-        agentProgressSummaries: true,
-        forwardSubagentText: true,
+        ...base,
       } as never,
     })) {
-      const m = message as { type?: string; subtype?: string; result?: string; usage?: { input_tokens?: number; output_tokens?: number } };
+      const m = message as { type?: string; subtype?: string; result?: string; usage?: unknown };
       if (m.type === "result" && typeof m.result === "string") {
         summary = m.result;
         if (m.usage) {
-          tokensIn += m.usage.input_tokens ?? 0;
-          tokensOut += m.usage.output_tokens ?? 0;
+          const stats = parseUsageWithCache(m.usage);
+          tokensIn += stats.inputTokens;
+          tokensOut += stats.outputTokens;
+          cacheReadTokens += stats.cacheReadTokens;
+          cacheWriteTokens += stats.cacheWrite5mTokens + stats.cacheWrite1hTokens;
         }
         const ev = /EVIDENCE:\s*([\s\S]*?)(?:STATUS:|$)/.exec(m.result);
         if (ev?.[1]) {
@@ -152,6 +160,8 @@ async function runPacket(
     evidence,
     tokensIn,
     tokensOut,
+    cacheReadTokens,
+    cacheWriteTokens,
     costUsd,
     durationMs,
     tier: decision.tier,

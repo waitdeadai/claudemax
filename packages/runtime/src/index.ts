@@ -12,3 +12,4 @@ export * from "./hive.js";
 export * from "./council.js";
 export * from "./agent-factory.js";
 export * from "./overnight.js";
+export * from "./sdk-options.js";

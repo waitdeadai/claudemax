@@ -39,6 +39,8 @@ export interface RunRecord {
   readonly costUsd: number;
   readonly tokensIn: number;
   readonly tokensOut: number;
+  readonly cacheReadTokens?: number;
+  readonly cacheWriteTokens?: number;
   readonly durationMs: number;
   readonly plan?: string;
   readonly mode?: string;
@@ -83,6 +85,30 @@ export class MemoryStore {
     this.db = new Database(opts.path);
     this.db.pragma("journal_mode = WAL");
     this.db.exec(SCHEMA_SQL);
+    this.migrate();
+  }
+
+  // Idempotent forward migrations. SQLite ALTER TABLE ADD COLUMN throws if the
+  // column already exists; we swallow that case so an existing DB picks up
+  // new columns silently.
+  private migrate(): void {
+    const cols: Array<[string, string, string]> = [
+      ["runs", "cache_read_tokens", "INTEGER NOT NULL DEFAULT 0"],
+      ["runs", "cache_write_tokens", "INTEGER NOT NULL DEFAULT 0"],
+      ["runs", "plan", "TEXT"],
+      ["runs", "mode", "TEXT"],
+    ];
+    for (const [table, col, def] of cols) {
+      try {
+        this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+      } catch (e) {
+        const msg = (e as Error).message.toLowerCase();
+        if (!msg.includes("duplicate column")) {
+          // re-throw if it's not a "column already exists" error
+          if (!msg.includes("already exists")) throw e;
+        }
+      }
+    }
   }
 
   close(): void {
@@ -129,8 +155,8 @@ export class MemoryStore {
 
   recordRun(r: RunRecord): number {
     const stmt = this.db.prepare(
-      `INSERT INTO runs (spec_title, goal, status, cost_usd, tokens_in, tokens_out, duration_ms, plan, mode, evidence_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO runs (spec_title, goal, status, cost_usd, tokens_in, tokens_out, cache_read_tokens, cache_write_tokens, duration_ms, plan, mode, evidence_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const res = stmt.run(
       r.specTitle,
@@ -139,6 +165,8 @@ export class MemoryStore {
       r.costUsd,
       r.tokensIn,
       r.tokensOut,
+      r.cacheReadTokens ?? 0,
+      r.cacheWriteTokens ?? 0,
       r.durationMs,
       r.plan ?? null,
       r.mode ?? null,
@@ -147,6 +175,32 @@ export class MemoryStore {
     const rowid = Number(res.lastInsertRowid);
     this.indexFts("runs", rowid, r.specTitle, `${r.goal}\n${r.status}`);
     return rowid;
+  }
+
+  cacheStatsThisPeriod(periodStartIso?: string): {
+    readonly totalInputTokens: number;
+    readonly cacheReadTokens: number;
+    readonly cacheWriteTokens: number;
+    readonly hitRatePct: number;
+  } {
+    const start = periodStartIso ?? startOfMonthIso();
+    const row = this.db
+      .prepare(
+        `SELECT COALESCE(SUM(tokens_in), 0) AS tokens_in,
+                COALESCE(SUM(cache_read_tokens), 0) AS cache_read_tokens,
+                COALESCE(SUM(cache_write_tokens), 0) AS cache_write_tokens
+         FROM runs WHERE ts >= ?`,
+      )
+      .get(start) as { tokens_in: number; cache_read_tokens: number; cache_write_tokens: number };
+    const totalInput = row?.tokens_in ?? 0;
+    const cacheRead = row?.cache_read_tokens ?? 0;
+    const hitRate = totalInput > 0 ? (cacheRead / totalInput) * 100 : 0;
+    return {
+      totalInputTokens: totalInput,
+      cacheReadTokens: cacheRead,
+      cacheWriteTokens: row?.cache_write_tokens ?? 0,
+      hitRatePct: hitRate,
+    };
   }
 
   recordResearchSource(s: ResearchSourceRecord): number {
