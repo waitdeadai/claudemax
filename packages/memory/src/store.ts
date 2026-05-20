@@ -44,6 +44,8 @@ export interface RunRecord {
   readonly durationMs: number;
   readonly plan?: string;
   readonly mode?: string;
+  readonly agentId?: string;
+  readonly parentAgentId?: string;
   readonly evidence: Record<string, unknown>;
 }
 
@@ -97,6 +99,8 @@ export class MemoryStore {
       ["runs", "cache_write_tokens", "INTEGER NOT NULL DEFAULT 0"],
       ["runs", "plan", "TEXT"],
       ["runs", "mode", "TEXT"],
+      ["runs", "agent_id", "TEXT"],
+      ["runs", "parent_agent_id", "TEXT"],
     ];
     for (const [table, col, def] of cols) {
       try {
@@ -104,10 +108,15 @@ export class MemoryStore {
       } catch (e) {
         const msg = (e as Error).message.toLowerCase();
         if (!msg.includes("duplicate column")) {
-          // re-throw if it's not a "column already exists" error
           if (!msg.includes("already exists")) throw e;
         }
       }
+    }
+    try {
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_runs_agent ON runs(agent_id)`);
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_runs_parent_agent ON runs(parent_agent_id)`);
+    } catch {
+      /* ignore — partial index creation is non-fatal */
     }
   }
 
@@ -155,8 +164,8 @@ export class MemoryStore {
 
   recordRun(r: RunRecord): number {
     const stmt = this.db.prepare(
-      `INSERT INTO runs (spec_title, goal, status, cost_usd, tokens_in, tokens_out, cache_read_tokens, cache_write_tokens, duration_ms, plan, mode, evidence_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO runs (spec_title, goal, status, cost_usd, tokens_in, tokens_out, cache_read_tokens, cache_write_tokens, duration_ms, plan, mode, agent_id, parent_agent_id, evidence_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const res = stmt.run(
       r.specTitle,
@@ -170,6 +179,8 @@ export class MemoryStore {
       r.durationMs,
       r.plan ?? null,
       r.mode ?? null,
+      r.agentId ?? null,
+      r.parentAgentId ?? null,
       JSON.stringify(r.evidence),
     );
     const rowid = Number(res.lastInsertRowid);

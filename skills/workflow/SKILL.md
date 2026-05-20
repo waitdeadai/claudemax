@@ -1,6 +1,6 @@
 ---
 name: workflow
-description: Alias for /cmax. Same FAT umbrella that auto-runs deepresearch + multispec + parallel /goal + verify. Use this if you remember /workflow from minmaxing v1.
+description: ALIAS for /cmax — identical engine. Kept only for minmaxing v1 muscle memory. Routing model should pick /cmax (or /ask) by default; only invoke /workflow if the user typed the literal string `/workflow`.
 ---
 
 # /workflow — v1 muscle-memory alias for /cmax

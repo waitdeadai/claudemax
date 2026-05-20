@@ -87,16 +87,17 @@ Major rewrite: Anthropic-only, multispec engine as the default daily-driver, two
 - `cmax taste init` — auto-bootstrap.
 - `cmax bg {setup|status|phone|kill}` — remote orchestration.
 
-### Added — 26 skills (audited for overlap)
+### Added — 29 active skills (audited for overlap)
 
-4 umbrellas: `/cmax`, `/workflow`, `/opussonnet`, `/opusolo`.
+5 umbrellas: `/ask`, `/cmax`, `/workflow` (alias), `/opussonnet` (alias), `/opusolo`.
 5 research: `/deepresearch`, `/audit`, `/investigate`, `/codesearch`, `/introspect`.
 2 planning: `/spec`, `/specqa`.
-4 execution: `/goal`, `/parallel`, `/hive`, `/council`.
+5 execution: `/goal`, `/tdd`, `/parallel`, `/hive`, `/council`.
 3 verification: `/verify`, `/review`, `/ship`.
 3 memory/state: `/memory`, `/align`, `/overnight`.
 2 taste: `/taste`, `/deepretaste`.
-3 infrastructure: `/agentfactory`, `/route`, `/agentteams`.
+4 infrastructure: `/agentfactory`, `/route`, `/agentteams`, `/harness-audit`.
+Plus 1 deprecated stub: `/dispatch` (use `/parallel` or `cmax dispatch` instead).
 
 ### Added — memory schema extensions
 
@@ -104,7 +105,7 @@ Major rewrite: Anthropic-only, multispec engine as the default daily-driver, two
 
 ### Added — dark-patterns hooks integration
 
-`.claude/settings.json` enables `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true`; `.claude/DARK_PATTERNS_INSTALL.md` documents install of `waitdeadai/llm-dark-patterns` (31 hooks: no-vibes, no-emoji-spam, no-aggregator-hallucination, honest-eta, no-fake-cite, etc.).
+`.claude/settings.json` enables `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true`; `.claude/DARK_PATTERNS_INSTALL.md` documents install of `waitdeadai/llm-dark-patterns` (35 hooks: no-vibes, no-emoji-spam, no-aggregator-hallucination, honest-eta, no-fake-cite, etc.).
 
 ### Added — brand assets
 

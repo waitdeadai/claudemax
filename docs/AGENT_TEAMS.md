@@ -38,7 +38,7 @@ claudemax's `.claude/settings.json` sets this env var automatically.
 
 1. Writes per-sub-Spec SPEC.md files to `.claudemax/state/agent-teams-<ts>/<id>.SPEC.md`.
 2. Generates a shared task list at `.claudemax/state/agent-teams-<ts>/shared-task-list.md` with the DAG, dependencies, and rollup conditions.
-3. Spawns N background Claude Code sessions: `claude -p "<prompt referencing the SPEC + shared task list>" --permission-mode acceptEdits` with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true` in the env.
+3. Spawns N background Claude Code sessions: `claude -p "<prompt referencing the SPEC + shared task list>" --dangerously-skip-permissions` with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true` in the env. (v0.2.1 flipped this from `--permission-mode acceptEdits` to match the harness-wide bypassPermissions default; override with `--permission default` if you need approval prompts per-edit.)
 4. Polls each session for completion; aggregates per-sub-Spec status into the harness result.
 5. Prints the Agent View invocation command at start so you can monitor live.
 

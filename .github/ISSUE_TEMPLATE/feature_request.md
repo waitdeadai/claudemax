@@ -25,7 +25,7 @@ Check ALL that apply. If none apply, the feature probably doesn't fit:
 
 ## Overlap audit (mandatory)
 
-Per `docs/SKILL_CATALOG.md`, claudemax is intentionally a lean 26-skill catalog. If your proposal adds a skill or CLI command:
+Per `docs/SKILL_CATALOG.md`, claudemax is intentionally a lean 29-active-skill catalog (plus 1 deprecated stub). If your proposal adds a skill or CLI command:
 
 - Which existing skill / command is most similar?
 - Why is your proposal distinct enough to warrant a new entry rather than an extension?

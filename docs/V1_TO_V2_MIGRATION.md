@@ -1,6 +1,6 @@
 # minmaxing v1 → claudemax v2 migration
 
-For users of [waitdeadai/minmaxing](https://github.com/waitdeadai/minmaxing) coming to claudemax. Big-picture: v2 is **Anthropic-only**, **lean (26 skills vs 43)**, and built around the Claude Code 2.1.139 `/goal` validator-loop + multispec decomposition.
+For users of [waitdeadai/minmaxing](https://github.com/waitdeadai/minmaxing) coming to claudemax. Big-picture: v2 is **Anthropic-only**, **lean (29 active skills vs v1's 43)**, and built around the Claude Code 2.1.139 `/goal` validator-loop + multispec decomposition.
 
 ## What changed at the top
 
@@ -13,7 +13,7 @@ For users of [waitdeadai/minmaxing](https://github.com/waitdeadai/minmaxing) com
 | Parallelism | Hardware-aware packets | **Two modes auto-selected**: SDK subagents (Mode A) or Claude Code Agent Teams (Mode B) |
 | Verification | `/verify` skill + agentcloseout-physics | `/verify` (blind Opus) + dark-patterns evidence hooks |
 | Taste | `/tastebootstrap` 10-Q wizard | `/taste` auto-bootstrap via `/deepresearch` (NO questions) |
-| Skills | 43 skills | **26 skills** (overlap-audited) |
+| Skills | 43 skills | **29 active skills + 1 deprecated stub** (overlap-audited; v0.2.1 added `/tdd` + `/harness-audit`) |
 | Memory | SQLite + FTS5 (5 tiers) | SQLite + FTS5 (same + `research_sources`, `taste_history`, `sub_specs`) |
 | Billing model | Per-token USD estimates | **Plan-aware**: detect Max5x/Max20x; show "$X • Y% of monthly credit" |
 | Auth | API key | **Subscription Agent SDK credit** by default (Max 5x/20x); API key opt-out |

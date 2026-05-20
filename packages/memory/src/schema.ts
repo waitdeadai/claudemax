@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS runs (
   duration_ms INTEGER NOT NULL DEFAULT 0,
   plan TEXT,
   mode TEXT,
+  agent_id TEXT,
+  parent_agent_id TEXT,
   evidence_json TEXT
 );
 
@@ -93,6 +95,8 @@ CREATE INDEX IF NOT EXISTS idx_decisions_topic ON decisions(topic);
 CREATE INDEX IF NOT EXISTS idx_errors_sig ON errors_solutions(signature);
 CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
 CREATE INDEX IF NOT EXISTS idx_runs_ts ON runs(ts);
+CREATE INDEX IF NOT EXISTS idx_runs_agent ON runs(agent_id);
+CREATE INDEX IF NOT EXISTS idx_runs_parent_agent ON runs(parent_agent_id);
 CREATE INDEX IF NOT EXISTS idx_research_topic ON research_sources(topic);
 CREATE INDEX IF NOT EXISTS idx_taste_kind ON taste_history(kind);
 CREATE INDEX IF NOT EXISTS idx_subspecs_run ON sub_specs(run_id);

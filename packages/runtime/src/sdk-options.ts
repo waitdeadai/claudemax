@@ -27,6 +27,32 @@ export interface BaseQueryOptions {
   readonly strictMcpConfig?: boolean;
   readonly sessionStoreFlush?: "batched" | "eager";
   readonly abortSignal?: AbortSignal;
+  readonly agentId?: string;
+  readonly parentAgentId?: string;
+  readonly serviceVersion?: string;
+}
+
+// OTEL conventions per https://opentelemetry.io/docs/specs/semconv/
+// Claude Code Agent SDK v0.3.139+ reads OTEL_RESOURCE_ATTRIBUTES + the
+// x-claude-code-agent-id / x-claude-code-parent-agent-id env vars when
+// emitting spans (per the v2.1.139 + v2.1.145 changelog).
+export function buildOtelEnv(opts: BaseQueryOptions): Record<string, string> {
+  const env: Record<string, string> = {};
+  const existing = process.env["OTEL_RESOURCE_ATTRIBUTES"] ?? "";
+  const attrs = [
+    `service.name=claudemax`,
+    `service.version=${opts.serviceVersion ?? "0.2.1"}`,
+    `deployment.environment=user-cli`,
+  ];
+  if (opts.agentId) attrs.push(`claudemax.agent_id=${opts.agentId}`);
+  if (opts.parentAgentId) attrs.push(`claudemax.parent_agent_id=${opts.parentAgentId}`);
+  env["OTEL_RESOURCE_ATTRIBUTES"] = existing
+    ? `${existing},${attrs.join(",")}`
+    : attrs.join(",");
+  if (opts.agentId) env["CLAUDE_CODE_AGENT_ID"] = opts.agentId;
+  if (opts.parentAgentId) env["CLAUDE_CODE_PARENT_AGENT_ID"] = opts.parentAgentId;
+  if (!process.env["OTEL_SERVICE_NAME"]) env["OTEL_SERVICE_NAME"] = "claudemax";
+  return env;
 }
 
 // Estimate a task_budget in tokens from a USD budget cap, using the tier's
@@ -57,7 +83,8 @@ export function baseSdkOptions(o: BaseQueryOptions = {}): Record<string, unknown
     enableFileCheckpointing: true,
   };
   if (o.cwd) out["cwd"] = o.cwd;
-  if (o.env) out["env"] = o.env;
+  const otel = buildOtelEnv(o);
+  out["env"] = { ...otel, ...(o.env ?? {}) };
   if (o.maxTurns !== undefined) out["maxTurns"] = o.maxTurns;
   if (o.maxBudgetUsd !== undefined) out["maxBudgetUsd"] = o.maxBudgetUsd;
   if (o.thinking === "adaptive") out["thinking"] = { type: "adaptive" };

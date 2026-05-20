@@ -90,13 +90,47 @@ curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/setup.sh 
 
 This is the legacy installer for the **"main mode while away from the computer"** flow. It auto-installs `tmux`, `qrencode`, `Tailscale` (via apt/brew/dnf/pacman with sudo confirms), generates `NTFY_TOPIC`, prints phone-side QR codes, then does everything `install.sh` does. Only use this if you actually want to drive claudemax from your phone over SSH.
 
+### Behind a corporate proxy
+
+If `curl` or `irm` can't reach `raw.githubusercontent.com`, configure your proxy before running the installer:
+
+```bash
+# Mac / Linux / WSL
+export HTTPS_PROXY="http://your-proxy:8080"
+export HTTP_PROXY="$HTTPS_PROXY"
+git config --global http.proxy "$HTTPS_PROXY"
+```
+
+```powershell
+# Windows
+$env:HTTPS_PROXY = "http://your-proxy:8080"
+$env:HTTP_PROXY  = $env:HTTPS_PROXY
+git config --global http.proxy $env:HTTPS_PROXY
+```
+
 ### Verified install (recommended for any curl-pipe-bash)
 
 ```bash
+# install.sh (Mac / Linux / WSL slim installer)
+curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.sh.sha256 -o install.sh.sha256
+sha256sum -c install.sh.sha256          # or: shasum -a 256 -c install.sh.sha256
+bash install.sh
+
+# setup.sh (legacy full-ceremony installer for remote-from-phone flow)
 curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/setup.sh -o setup.sh
 curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/setup.sh.sha256 -o setup.sh.sha256
-sha256sum -c setup.sh.sha256          # or: shasum -a 256 -c setup.sh.sha256
+sha256sum -c setup.sh.sha256
 bash setup.sh
+```
+
+```powershell
+# install.ps1 (Windows slim installer)
+irm https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.ps1 -OutFile install.ps1
+irm https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.ps1.sha256 -OutFile install.ps1.sha256
+Get-FileHash install.ps1 -Algorithm SHA256 | Format-List
+# Compare the hash above to install.ps1.sha256 contents (first 64 chars), then:
+.\install.ps1
 ```
 
 ### Update existing install (one command)
@@ -141,7 +175,7 @@ claudemax v0.2 routes 100% of provider calls through `query()` → bills against
 
 ## Dark-patterns hooks integrated
 
-claudemax dogfoods the [waitdeadai/llm-dark-patterns](https://github.com/waitdeadai/llm-dark-patterns) plugin (31 hooks: no-vibes, no-emoji-spam, no-aggregator-hallucination, no-silent-worker-success, no-credential-leak-in-handoff, no-fake-cite, etc.). Install:
+claudemax dogfoods the [waitdeadai/llm-dark-patterns](https://github.com/waitdeadai/llm-dark-patterns) plugin (35 hooks: no-vibes, no-emoji-spam, no-aggregator-hallucination, no-silent-worker-success, no-credential-leak-in-handoff, no-fake-cite, etc.). Install:
 
 ```bash
 claude plugin marketplace add waitdeadai/claude-plugins
@@ -153,9 +187,12 @@ See `.claude/DARK_PATTERNS_INSTALL.md` for the full inventory and standalone ins
 ## CLI
 
 ```bash
+cmax ask "<goal>"                          # canonical ask-and-achieve entry; same engine as `cmax run`
 cmax run "<goal>"                          # full multispec pipeline (default umbrella)
 cmax run "<goal>" --variant opusolo        # all-Opus mode
 cmax run "<goal>" --mode teams             # force Agent Teams (Mode B) parallelism
+cmax run "<goal>" --tdd                    # enforce write-failing-test-first per sub-Spec where a test verifyHint exists
+cmax run "<goal>" --confidence 0.85        # verifier confidence threshold for primary findings
 
 cmax doctor                                # billing/auth/parallel/plan
 cmax taste init                            # auto-bootstrap taste.md + taste.vision via /deepresearch
@@ -164,7 +201,8 @@ cmax research "<topic>"                    # /deepresearch with source ledger
 
 cmax spec "<goal>"                         # single SPEC.md (no multispec)
 cmax goal SPEC.md                          # /goal loop on existing SPEC.md
-cmax verify SPEC.md                        # blind Opus verify pass
+cmax tdd SPEC.md                           # strict test-first cycle (write failing test → implement → verify)
+cmax verify SPEC.md --confidence 0.85      # blind Opus verify pass
 cmax dispatch <plan.json>                  # low-level parallel packet fan-out
 cmax route "<task>" --complexity 6         # inspect router decision
 
@@ -173,6 +211,8 @@ cmax memory runs --limit 20                # recent runs
 cmax memory credit                         # current-period credit consumption
 
 cmax config get/set/list/path              # project config
+cmax bg setup/status/kill/phone            # tmux + Tailscale + ntfy + phone QR onboarding (remote flow)
+cmax update                                # git pull + pnpm install + pnpm build + cmax doctor
 
 cmax init                                  # install skills + hooks into a project
 ```
@@ -186,7 +226,7 @@ cmax init                                  # install skills + hooks into a proje
 - [Model routing](./docs/MODEL_ROUTING.md)
 - [Goal pipeline](./docs/GOAL_PIPELINE.md)
 - [Workflow variants](./docs/WORKFLOW_VARIANTS.md)
-- [Skill catalog (lean 26)](./docs/SKILL_CATALOG.md)
+- [Skill catalog (29 active + 1 deprecated stub)](./docs/SKILL_CATALOG.md)
 - [Taste auto-bootstrap](./docs/TASTE_AUTOBOOTSTRAP.md)
 - [v1 → v2 migration](./docs/V1_TO_V2_MIGRATION.md)
 - [Quickstart](./docs/QUICKSTART.md)

@@ -35,8 +35,18 @@ function Require-Cmd($name, $hint) {
   }
 }
 Require-Cmd "node" "Install Node 22+ from https://nodejs.org"
-Require-Cmd "pnpm" "Run: corepack enable; corepack prepare pnpm@latest --activate"
 Require-Cmd "git"  "Install Git from https://git-scm.com"
+
+if (-not (Get-Command "pnpm" -ErrorAction SilentlyContinue)) {
+  if (Get-Command "corepack" -ErrorAction SilentlyContinue) {
+    Warn "pnpm missing; bootstrapping via corepack..."
+    corepack enable
+    corepack prepare pnpm@latest --activate
+  } else {
+    Err "pnpm + corepack both missing. Install pnpm: npm install -g pnpm  (or install corepack)"
+    exit 1
+  }
+}
 
 $nodeVer = (node -v) -replace '^v',''
 $nodeMajor = [int]($nodeVer.Split('.')[0])
@@ -133,7 +143,7 @@ New-Item -ItemType Directory -Force -Path $configDir | Out-Null
 $configPath = Join-Path $configDir "config.json"
 @"
 {
-  "installedAt": "$(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ" -AsUTC)",
+  "installedAt": "$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))",
   "installDir": "$($InstallDir -replace '\\','\\\\')",
   "mode": "local"
 }

@@ -1,6 +1,6 @@
 # claudemax skills
 
-Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) for the lean 26-skill power-user catalog.
+Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) for the lean 29-skill power-user catalog (27 active + 2 aliases). One additional directory (`/dispatch`) ships as a DEPRECATED stub for v1 muscle memory; the router should never pick it.
 
 ## Catalog
 
@@ -73,7 +73,7 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/agentteams` | Manual invocation of Mode B (Claude Code Agent Teams) |
 | `/harness-audit` | Periodic review of claudemax's own scaffolding against current Opus capability |
 
-## Total: 28 skills (5 + 5 + 2 + 5 + 3 + 3 + 2 + 4 minus 1 alias overlap)
+## Total: 29 active skills (5 umbrellas + 5 research + 2 planning + 5 execution + 3 verification + 3 memory + 2 taste + 4 infrastructure = 29). Two of the 5 umbrellas (`/workflow`, `/opussonnet`) are explicit ALIAS-for-/cmax entries kept only for v1 muscle memory. One additional directory (`/dispatch`) ships as a DEPRECATED stub — router should skip; use `/parallel` or the CLI `cmax dispatch` instead.
 
 Lean, audited for overlap. Cuts vs v1's 43-skill catalog: MiniMax-specific skills dropped entirely; /webresearch merged into /deepresearch; /autoplan into the multispec engine; /qa into /verify; /digestaste + /digestflow are internal runtime functions; /tastebootstrap replaced by auto-bootstrap /taste; product-specific skills (/defineicp /icpweek /claudeproduct etc.) deferred.
 

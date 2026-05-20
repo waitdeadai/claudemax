@@ -1,11 +1,11 @@
 ---
 name: Skill proposal
-about: Propose adding a new skill to the lean 26-skill catalog
+about: Propose adding a new skill to the lean 29-active-skill catalog
 title: 'skill: '
 labels: skill-proposal
 ---
 
-> claudemax intentionally maintains a lean 26-skill catalog audited for overlap. Adding skills requires justification.
+> claudemax intentionally maintains a lean 29-active-skill catalog audited for overlap. Adding skills requires justification AND should survive a `/harness-audit` run against the existing 29.
 > Please read [`docs/SKILL_CATALOG.md`](../../docs/SKILL_CATALOG.md) first.
 
 ## Proposed skill

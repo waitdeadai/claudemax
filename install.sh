@@ -38,14 +38,41 @@ err()  { printf "  fail  %s\n" "$*" >&2; }
 head() { printf "\n==> %s\n" "$*"; }
 
 head "preflight"
-command -v node >/dev/null 2>&1 || { err "node not found. Install Node 22+ first: https://nodejs.org"; exit 1; }
-command -v pnpm >/dev/null 2>&1 || { err "pnpm not found. Run: corepack enable && corepack prepare pnpm@latest --activate"; exit 1; }
 command -v git  >/dev/null 2>&1 || { err "git not found."; exit 1; }
+if ! command -v node >/dev/null 2>&1; then
+  err "node not found. Install Node 22+:"
+  echo "  macOS:  brew install node"
+  echo "  Ubuntu: curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs"
+  echo "  Fedora: curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash - && sudo dnf install -y nodejs"
+  echo "  Arch:   sudo pacman -S --noconfirm nodejs"
+  exit 1
+fi
 NODE_MAJOR=$(node -v | sed -E 's/v([0-9]+)\..*/\1/')
 if [ "$NODE_MAJOR" -lt 22 ]; then
-  err "node ${NODE_MAJOR} < 22. claudemax requires Node 22+."; exit 1
+  err "node ${NODE_MAJOR} < 22. claudemax requires Node 22+. Upgrade:"
+  echo "  Ubuntu/Debian: curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs"
+  echo "  nvm:          nvm install 22 && nvm use 22"
+  echo "  Volta:        volta install node@22"
+  exit 1
+fi
+if ! command -v pnpm >/dev/null 2>&1; then
+  if command -v corepack >/dev/null 2>&1; then
+    warn "pnpm missing; bootstrapping via corepack..."
+    corepack enable 2>/dev/null || sudo corepack enable
+    corepack prepare pnpm@latest --activate
+  else
+    err "pnpm + corepack both missing. Install pnpm: npm install -g pnpm  (or install corepack)"
+    exit 1
+  fi
 fi
 ok "node $(node -v), pnpm $(pnpm -v), git"
+
+# refuse-as-root: symlinks land in /root/.local/bin and config in /root/.claudemax-state, locking out the real user
+if [ "$(id -u)" = "0" ] && [ -z "${SUDO_USER:-}" ]; then
+  err "Running as root with no SUDO_USER set. Re-run as your normal user (without sudo):"
+  echo "  curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.sh | bash"
+  exit 1
+fi
 
 if ! command -v claude >/dev/null 2>&1; then
   warn "claude CLI not on PATH. Required for the Agent SDK credit billing path AND Mode B (Agent Teams). Install: https://code.claude.com/docs/en/quickstart"

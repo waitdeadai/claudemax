@@ -1,6 +1,6 @@
 ---
 name: opussonnet
-description: FAT daily-driver umbrella. Opus plans + judges + verifies; Sonnet executes sub-Spec /goal loops. Auto-runs deepresearch + multispec + parallel + verify. Your v1 muscle-memory main command for routine software work.
+description: ALIAS for /cmax — identical engine and identical routing (Opus plans/judges/verifies, Sonnet executes sub-Specs). Kept only for minmaxing v1 muscle memory. Routing model should pick /cmax (or /ask) by default; only invoke /opussonnet if the user typed the literal string `/opussonnet`.
 ---
 
 # /opussonnet — Opus judgment + Sonnet execution

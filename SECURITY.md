@@ -15,7 +15,7 @@ Users opt into the API-key billing path (`CMAX_PLAN=api` or `ANTHROPIC_API_KEY` 
 | Action | Default behavior |
 |---|---|
 | Read files in your project | Yes, every umbrella reads the project |
-| Edit files in your project | Yes, with `permissionMode: 'acceptEdits'` by default for `cmax run` and `cmax goal` |
+| Edit files in your project | Yes, with `permissionMode: 'bypassPermissions'` by default for `cmax run`, `cmax goal`, `cmax ask`, `cmax tdd`, `cmax dispatch` (equivalent to Claude Code's `--dangerously-skip-permissions`). Override per-invocation with `--permission default` to restore approval prompts. |
 | Run shell commands | Yes — via Claude Code's `Bash` tool, gated by Claude Code's permission system |
 | Network calls | Yes — `WebSearch`, `WebFetch`, and outbound to the Anthropic API |
 | Spawn parallel processes | Yes in Mode B (Agent Teams) — each teammate is a separate `claude` subprocess writing to its own worktree under `.claude/worktrees/<session-id>/` |
@@ -30,7 +30,7 @@ Users opt into the API-key billing path (`CMAX_PLAN=api` or `ANTHROPIC_API_KEY` 
 
 1. **Inspect `setup.sh` before piping to bash.** It auto-installs tmux / qrencode / Tailscale via official package managers and downloads the official Tailscale install script. Review the file first.
 2. **Pin Claude Code version** if you're on the Mode B Agent Teams experimental path — the API may shift.
-3. **Use `--permission default`** (not `acceptEdits`) on `cmax run` / `cmax goal` when working in a repo where automated edits are risky. You'll have to approve each edit interactively.
+3. **Use `--permission default`** on `cmax run` / `cmax goal` / `cmax ask` / `cmax tdd` when working in a repo where automated edits are risky — the v0.2.1 default is `bypassPermissions` (= Claude Code's `--dangerously-skip-permissions`), which runs unattended without approval prompts. `--permission default` restores per-edit prompts. `--permission acceptEdits` allows edits but prompts on Bash/shell.
 4. **Run claudemax inside a dev container or VM** for untrusted goals. claudemax can read anything in the working directory, including files containing secrets.
 5. **Set `CMAX_PLAN=api` and use a scoped API key** if you want strict cost control via Anthropic dashboard.
 6. **Use the `cmax doctor` budget guard** — at > 90% of monthly Agent SDK credit, the router auto-demotes Opus → Sonnet for non-verify/non-spec packets. At > 95%, `cmax run` requires `--force`.

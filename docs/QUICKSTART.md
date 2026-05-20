@@ -2,12 +2,32 @@
 
 ## Install
 
+### Mac / Linux / WSL — one line
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.sh | bash
+```
+
+### Windows — PowerShell 5.1+ or 7+
+
+```powershell
+irm https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.ps1 | iex
+```
+
+### Manual (advanced)
+
 ```bash
 git clone https://github.com/waitdeadai/claudemax ~/.claudemax
 cd ~/.claudemax
 pnpm install
 pnpm build
 sudo ln -sf $PWD/packages/cli/dist/index.js /usr/local/bin/cmax
+```
+
+### Remote-from-phone flow (Tailscale + tmux + ntfy + QR onboarding)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/setup.sh | bash
 ```
 
 ## Authenticate

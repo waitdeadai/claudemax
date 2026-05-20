@@ -1,0 +1,46 @@
+{
+  "name": "claudemax",
+  "version": "0.2.1",
+  "description": "Anthropic-native power-user harness for Claude Max subscribers. Multispec engine + parallel /goal + blind /verify on Opus 4.7. 29-skill catalog, bundled llm-dark-patterns hooks, two parallelism modes (SDK subagents + Claude Code Agent Teams).",
+  "author": {
+    "name": "waitdeadai",
+    "url": "https://github.com/waitdeadai"
+  },
+  "homepage": "https://github.com/waitdeadai/claudemax",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitdeadai/claudemax.git"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude-code",
+    "agent-sdk",
+    "multispec",
+    "goal",
+    "verifier",
+    "max-parallel",
+    "anthropic",
+    "power-user"
+  ],
+  "engines": {
+    "claude-code": ">=2.1.139"
+  },
+  "components": {
+    "skills": "./skills",
+    "hooks": [
+      "./.claude/hooks",
+      "./vendor/llm-dark-patterns/hooks"
+    ],
+    "agents": "./agents",
+    "commands": "./packages/cli/dist/index.js"
+  },
+  "settings": {
+    "env": {
+      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "true"
+    },
+    "defaultPermissionMode": "bypassPermissions",
+    "defaultEffort": "xhigh",
+    "neverDemote": ["verify", "spec", "architect"]
+  },
+  "_schemaNote": "This manifest follows the Claude Code plugin format introduced in v2.1.129 (https://github.com/anthropics/claude-code/blob/main/plugins/README.md). Field names are best-effort against public docs as of 2026-05-20; validate with `claude plugin validate plugin.json` once that command stabilizes. Plugin marketplace publication path: https://claudemarketplaces.com/"
+}

@@ -6,7 +6,7 @@ Power users only. This is a sharp tool for a specific ICP (Claude Max subscriber
 
 - [`README.md`](./README.md) — what claudemax is
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — the three layers (skills / runtime / hooks)
-- [`docs/SKILL_CATALOG.md`](./docs/SKILL_CATALOG.md) — the lean 26-skill catalog with overlap-audit checklist
+- [`docs/SKILL_CATALOG.md`](./docs/SKILL_CATALOG.md) — the lean 29-active-skill catalog with overlap-audit checklist (plus 1 deprecated stub)
 - [`CLAUDE.md`](./CLAUDE.md) — repo rules that apply to changes here
 
 ## Dev setup
@@ -27,7 +27,7 @@ Requirements: Node 22+, pnpm 11+, git, curl. Optional: tmux, Tailscale, qrencode
 These are load-bearing. PRs that violate them without discussion will be closed.
 
 1. **Anthropic-only.** No multi-provider abstractions. If a task wants MiniMax / OpenAI / Gemini, push back or fork.
-2. **Lean catalog.** 26 skills, audited for overlap. Before adding a new skill, check `docs/SKILL_CATALOG.md`'s overlap-audit checklist. Justify the new skill's distinct purpose in your PR.
+2. **Lean catalog.** 29 active skills + 1 deprecated stub (`/dispatch`), audited for overlap. v0.2.1 added `/tdd` and `/harness-audit` from Anthropic's harness-design guide and Affaan's production patterns. Two umbrellas (`/workflow`, `/opussonnet`) are explicit ALIAS-for-/cmax entries — router should never pick them on merit. Before adding a new skill, check `docs/SKILL_CATALOG.md`'s overlap-audit checklist AND run `/harness-audit` to confirm the existing 29 still earn their place.
 3. **Router defaults are sacred.** The baseline tier table + escalation/demotion triggers in `packages/core/src/router.ts` define the harness's identity. Discuss before changing baselines.
 4. **`/verify`, `/spec`, `/architect` always run on Opus.** Never demote them, regardless of `--cheap` or monthly credit percentage. They're in `NEVER_DEMOTE`.
 5. **Multispec is the default.** Every umbrella auto-runs deepresearch + multispec decompose + parallel /goal + per-sub-spec verify + rollup verify. No `--multi` flag.

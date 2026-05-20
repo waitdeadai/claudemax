@@ -3,7 +3,7 @@ import kleur from "kleur";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseSpecMarkdown } from "@claudemax/core";
-import { runGoal } from "@claudemax/runtime";
+import { runGoal, runGoalNative } from "@claudemax/runtime";
 
 export function goalCommand(): Command {
   return new Command("goal")
@@ -15,22 +15,30 @@ export function goalCommand(): Command {
       "default | acceptEdits | plan | bypassPermissions",
       "bypassPermissions",
     )
+    .option(
+      "--native-goal",
+      "wrap Claude Code's native /goal (v2.1.139+) instead of the custom driver",
+      false,
+    )
     .action(
       async (
         specPath: string,
-        opts: { maxTurns: string; permission: string },
+        opts: { maxTurns: string; permission: string; nativeGoal: boolean },
       ) => {
         const md = readFileSync(resolve(process.cwd(), specPath), "utf8");
         const spec = parseSpecMarkdown(md);
-        console.log(kleur.cyan(`→ goal: ${spec.title}`));
+        console.log(kleur.cyan(`→ goal: ${spec.title}${opts.nativeGoal ? " (native /goal wrapper)" : ""}`));
         console.log(kleur.dim(`  ${spec.completionConditions.length} completion conditions`));
-        const r = await runGoal(spec, {
-          maxTurns: Number(opts.maxTurns),
-          permissionMode: opts.permission as "default" | "acceptEdits" | "plan" | "bypassPermissions",
-          onTurn: (turn) => {
-            if (turn % 5 === 0) process.stderr.write(kleur.dim(`  ${turn} turns…\n`));
-          },
-        });
+        const useNative = opts.nativeGoal || process.env["CMAX_USE_NATIVE_GOAL"] === "1";
+        const r = useNative
+          ? await runGoalNative(spec, { maxTurns: Number(opts.maxTurns) })
+          : await runGoal(spec, {
+              maxTurns: Number(opts.maxTurns),
+              permissionMode: opts.permission as "default" | "acceptEdits" | "plan" | "bypassPermissions",
+              onTurn: (turn) => {
+                if (turn % 5 === 0) process.stderr.write(kleur.dim(`  ${turn} turns…\n`));
+              },
+            });
         const statusColor =
           r.status === "finished" ? kleur.green : r.status === "blocked" ? kleur.yellow : kleur.red;
         console.log(statusColor(`\n${r.status.toUpperCase()}`));
