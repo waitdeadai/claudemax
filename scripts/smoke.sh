@@ -248,11 +248,28 @@ if [ -f assets/claudemax.png ]; then
 else
   fail "assets/claudemax.png exists" "missing"
 fi
+if [ -f assets/og-image.png ]; then
+  if file assets/og-image.png 2>/dev/null | grep -q "PNG image"; then
+    ok "assets/og-image.png is a valid PNG"
+    OG_SIZE=$(stat -c%s assets/og-image.png 2>/dev/null || stat -f%z assets/og-image.png 2>/dev/null || echo 0)
+    if [ "$OG_SIZE" -gt 50000 ] && [ "$OG_SIZE" -lt 1048576 ]; then
+      ok "assets/og-image.png size within GitHub social-preview bounds ($OG_SIZE bytes)"
+    else
+      fail "assets/og-image.png size" "$OG_SIZE bytes (expect 50KB–1MB for GitHub social preview)"
+    fi
+  else
+    fail "assets/og-image.png is a PNG" "file(1) did not identify it as PNG"
+  fi
+else
+  fail "assets/og-image.png exists" "missing"
+fi
 if [ -f assets/README.md ]; then ok "assets/README.md present (brand doc)"
 else fail "assets/README.md present" "missing"
 fi
-if grep -q "claudemax.png" README.md; then ok "README.md references claudemax.png as hero"
-else fail "README.md references claudemax.png" "not found in README"
+if grep -qE "(claudemax|og-image)\.png" README.md; then
+  ok "README.md references a brand image (claudemax.png or og-image.png)"
+else
+  fail "README.md references a brand image" "neither claudemax.png nor og-image.png referenced in README"
 fi
 
 echo
