@@ -10,6 +10,14 @@ on:
 permissions:
   contents: read
 
+# Opt into Node.js 24 for all JavaScript actions in this workflow.
+# Silences the "Node.js 20 actions are deprecated" warning that GitHub will
+# turn into the new default on 2026-06-02. actions/checkout@v4,
+# actions/setup-node@v4, and pnpm/action-setup@v4 still ship as Node-20
+# bundles but run cleanly on Node 24 today.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build-and-test:
     name: build · test · smoke
