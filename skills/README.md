@@ -4,13 +4,14 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 
 ## Catalog
 
-### Umbrellas (4) — daily drivers; each auto-runs the full pipeline
+### Umbrellas (5) — daily drivers; each auto-runs the full pipeline
 
 | Skill | Plan/judge | Sub-Spec /goal exec | Verify | Use |
 |---|---|---|---|---|
-| `/cmax` | Opus | Sonnet | Opus | Default daily-driver |
+| `/ask` | Opus | Sonnet | Opus | Canonical ask-and-achieve entry. `cmax ask "<goal>"` CLI equivalent |
+| `/cmax` | Opus | Sonnet | Opus | Default daily-driver; brand umbrella |
 | `/workflow` | Opus | Sonnet | Opus | Alias for /cmax (v1 muscle memory) |
-| `/opussonnet` | Opus | Sonnet | Opus | v1 muscle memory; same as /cmax |
+| `/opussonnet` | Opus | Sonnet | Opus | v1 muscle memory; same engine |
 | `/opusolo` | Opus | **Opus** | Opus | Max-effectiveness; auth/payments/novel-domain |
 
 ### Research (5)
