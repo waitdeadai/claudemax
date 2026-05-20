@@ -161,6 +161,64 @@ sudo ln -sf "$PWD/packages/cli/dist/index.js" /usr/local/bin/cmax
 cmax doctor
 ```
 
+## Permissions: `bypassPermissions` by default — power-user choice, read this
+
+claudemax ships with `permissionMode: "bypassPermissions"` as the default across every command (`cmax ask`, `run`, `goal`, `tdd`, `dispatch`, the multispec helpers, the verifier — every `query()` call). This is the SDK equivalent of Claude Code's `--dangerously-skip-permissions` flag.
+
+This is **a deliberate power-user choice by the maintainer** — claudemax is built for people running multi-day autonomous goals where per-edit approval prompts defeat the point of the harness. If that's not you, see "How to opt out" below.
+
+### What this actually means
+
+When you run any claudemax command, the spawned Claude Code session can — without asking you first — do the following inside your project (and, because Bash is unsandboxed, anywhere on your machine that your user account can reach):
+
+- Edit and create files anywhere you have write access (project files, dotfiles, configs).
+- Run shell commands (`pnpm test`, `git commit`, `curl`, `rm`, anything in your `$PATH`).
+- Spawn subprocesses, install packages, edit `~/.bashrc`/`~/.zshrc`, write to `~/.ssh/`, modify `.git/hooks/*`.
+- Make network calls (`curl`, `wget`, `WebFetch`, `WebSearch`) — including, in principle, exfiltrating data the model can read.
+- Read environment variables and on-disk credentials (`~/.aws/`, `~/.ssh/`, `~/.netrc`, `.env`).
+
+Claude Code's normal approval prompts are **NOT** what's stopping any of this — they're switched off.
+
+### What the safety net is
+
+claudemax bundles the [waitdeadai/llm-dark-patterns](https://github.com/waitdeadai/llm-dark-patterns) hook set (35 hooks). Several of these run as PreToolUse / PostToolUse gates against Bash + Edit + Write and block patterns that would otherwise slip through with permissions off:
+
+- `no-vibes` — blocks destructive Bash without explicit human approval (`rm -rf`, `git reset --hard`, etc.).
+- `no-credential-leak-in-handoff` — blocks plaintext `sk-*` / `ghp_*` / AWS keys in agent task payloads.
+- `no-approval-sneak` — blocks unapproved Edit/Write to sensitive paths (`.env*`, `secrets/`, `.kube/`, `terraform/state/`, `.ssh/`, `.gnupg/`, `prod/`).
+- `no-aggregator-hallucination`, `no-silent-worker-success`, `no-cherry-pick-rollup` — block fake parallel-worker success claims.
+
+These hooks are not equivalent to the OS-level permission prompts you're skipping. They're targeted dark-patterns blocks, not a sandbox. **You are responsible for the blast radius.**
+
+### How to opt out
+
+Per-invocation:
+
+```bash
+cmax ask "<goal>" --permission default       # restore Claude Code's normal approval prompts on every edit / Bash command
+cmax ask "<goal>" --permission acceptEdits   # auto-allow edits; still prompt on Bash and shell-out
+cmax run "<goal>" --permission default
+cmax goal SPEC.md --permission default
+cmax tdd SPEC.md --permission default
+```
+
+Same `--permission default` flag exists on `cmax dispatch`. Inside a project, you can also set `"permissions"` in `.claude/settings.json` to constrain what tools the model can call at all.
+
+### When to keep the default
+
+- You're driving claudemax on your own dev machine, in repos you own, against goals you've reviewed.
+- You're running overnight / multi-day autonomous goals where babysitting per-edit prompts is exactly what claudemax is supposed to eliminate.
+- You're inside a dev container / VM and the blast radius is bounded.
+
+### When to override (use `--permission default`)
+
+- Working in a repo with secrets or production credentials in scope.
+- Running an unfamiliar SPEC (e.g., something you didn't write).
+- A shared / multi-user machine where the goal could touch other users' files.
+- Any compliance-sensitive context (healthcare, finance, legal).
+
+The full threat model is in [`SECURITY.md`](./SECURITY.md). The bundled hooks help, but treat `bypassPermissions` like you'd treat running any other tool with `sudo`: useful, deliberate, and yours to revoke when context demands it.
+
 ## Billing (verified 2026-05-20)
 
 Anthropic split Claude subscription billing on **June 15, 2026** into two pools:
