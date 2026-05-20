@@ -11,9 +11,21 @@
 
 ---
 
+## Ask. Achieve.
+
 ```bash
-cmax run "migrate the auth layer to passkeys with passing tests end-to-end"
-# → /deepresearch → multispec decompose → /specqa → /introspect → parallel /goal × N → per-sub-Spec /verify → rollup /verify
+cmax ask "migrate the auth layer to passkeys with passing tests end-to-end"
+```
+
+One command. The pipeline runs:
+**`/deepresearch`** (web-current, sourced) → **multispec decompose** (Opus authors N sub-Specs + DAG) → **`/specqa`** (mechanically-checkable verifyHints) → **`/introspect`** (confidence + assumption hard-gate) → **parallel `/goal`** per DAG leaf (Mode A SDK subagents or Mode B Claude Code Agent Teams, auto-selected) → **per-sub-Spec `/verify`** (blind Opus) → **rollup `/verify`** (blind Opus against integration conditions). Bundled [dark-patterns hooks](https://github.com/waitdeadai/llm-dark-patterns) (35 of them) block vibes, fake citations, aggregator hallucination, and credential leaks throughout.
+
+Power-user flags live on `cmax run` (same engine; `cmax ask` is the friendly entry point):
+
+```bash
+cmax run "<goal>" --variant opusolo    # all-Opus for novel/security/auth work
+cmax run "<goal>" --mode teams         # force Claude Code Agent Teams (Mode B) parallelism
+cmax run "<goal>" --no-research        # skip /deepresearch for simpler goals
 ```
 
 ## ICP

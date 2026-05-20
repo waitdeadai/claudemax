@@ -16,6 +16,7 @@ import { researchCommand } from "./commands/research.js";
 import { configCommand } from "./commands/config.js";
 import { bgCommand } from "./commands/bg.js";
 import { updateCommand } from "./commands/update.js";
+import { askCommand } from "./commands/ask.js";
 
 const program = new Command();
 
@@ -24,6 +25,7 @@ program
   .description(kleur.bold("claudemax") + " — Anthropic-native power-user harness")
   .version("0.2.0");
 
+program.addCommand(askCommand());
 program.addCommand(runCommand());
 program.addCommand(doctorCommand());
 program.addCommand(tasteCommand());

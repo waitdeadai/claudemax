@@ -62,9 +62,14 @@ assert_output_contains "multispec pipeline" "help mentions multispec pipeline" $
 
 echo
 echo "--- subcommand help (does NOT invoke network) ---"
-for cmd in run doctor taste overnight research spec route goal verify dispatch memory config bg update init; do
+for cmd in ask run doctor taste overnight research spec route goal verify dispatch memory config bg update init; do
   assert_exit 0 "cmax $cmd --help exits 0" $CMAX $cmd --help
 done
+
+# `cmax ask` is the canonical ask-and-achieve verb; verify its --help mentions the pipeline
+assert_output_contains "deepresearch" "ask --help mentions deepresearch" $CMAX ask --help
+assert_output_contains "multispec" "ask --help mentions multispec" $CMAX ask --help
+assert_output_contains "verify" "ask --help mentions verify" $CMAX ask --help
 
 echo
 echo "--- doctor (plan auto-detect, no network) ---"

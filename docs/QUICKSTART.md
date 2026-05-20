@@ -46,12 +46,38 @@ claude plugin marketplace add waitdeadai/claude-plugins
 claude plugin install llm-dark-patterns@waitdeadai-plugins
 ```
 
-## First run
+## First run — ask and achieve
 
 In any project directory:
 
 ```bash
-cmax run "add a /health endpoint that returns build sha and uptime; cover with a test"
+cmax ask "add a /health endpoint that returns build sha and uptime; cover with a test"
+```
+
+That is the entire daily-driver UX. No flags, no model picker, no decomposition by hand.
+
+The SOTA-2026 pipeline runs automatically:
+
+1. **`/deepresearch`** the topic. Sonnet collects sources in parallel; Opus synthesizes. Source ledger persisted to `memory.research_sources`.
+2. **multispec decompose** — Opus authors N sub-Specs with a DAG of dependencies, rollup completion conditions, and per-sub-Spec write-sets.
+3. **`/specqa`** (parallel) — Haiku checks each sub-Spec has mechanically-checkable verifyHints.
+4. **`/introspect`** (parallel) — Opus rates confidence per sub-Spec; blocks at confidence < 6.
+5. **Mode auto-selection** — Mode A (SDK subagents in one `query()`) for ≤ 5 sub-Specs / short runs; Mode B ([Claude Code Agent Teams](https://code.claude.com/docs/en/agent-teams) with shared task list + worktree isolation) for big swarms or write-set overlap.
+6. **Parallel `/goal`** per DAG leaf — Sonnet executes by default; Opus on router escalations (security, novelty, complexity ≥ 7).
+7. **Per-sub-Spec `/verify`** (parallel) — blind Opus re-reads repo and runs each verifyHint.
+8. **Rollup `/verify`** — blind Opus checks the integration conditions across all sub-Spec outputs.
+9. **Memory record** + state snapshot. ntfy.sh push to phone if `NTFY_TOPIC` is set.
+
+Throughout: bundled [dark-patterns hooks](https://github.com/waitdeadai/llm-dark-patterns) (35 of them, wired by `cmax init`) block vibes, fake citations, aggregator hallucination, and credential leaks.
+
+Power-user flags (same engine; `cmax ask` is the friendly entry point):
+
+```bash
+cmax run "<goal>" --variant opusolo    # all-Opus exec for novel/security/auth work (~3× cost, max effectiveness)
+cmax run "<goal>" --mode teams         # force Claude Code Agent Teams (Mode B) parallelism
+cmax run "<goal>" --no-research        # skip /deepresearch for simpler / well-known goals
+cmax run "<goal>" --no-verify          # skip independent verification (not recommended)
+cmax run "<goal>" --max-turns 80       # cap each sub-Spec's /goal loop
 ```
 
 This will:

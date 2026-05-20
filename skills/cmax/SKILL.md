@@ -5,7 +5,11 @@ description: The default FAT umbrella. Auto-runs deepresearch + multispec decomp
 
 # /cmax — default daily-driver
 
-The umbrella. You hand it a goal, it produces results.
+The umbrella. You describe what you want; the pipeline produces it.
+
+> CLI equivalent: `cmax ask "<your goal>"` — same engine, friendly verb. Power-user flags live on `cmax run`.
+
+**Ask. Achieve.** No 10-question wizards, no model picker, no decomposition-by-hand. The SOTA-2026 spec-driven + deepresearch-backed pipeline runs automatically.
 
 ## Pipeline (default behavior, no flags)
 
