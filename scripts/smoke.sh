@@ -174,10 +174,18 @@ if grep -q "tailscale.com/download" "$TMP/phone.out"; then ok "bg phone prints T
 else fail "bg phone prints Tailscale download URL" "not found"
 fi
 
-# bg setup without --projects + no tmux on this machine should still fail gracefully
-$CMAX bg setup --session smoke-test-session >/dev/null 2>&1; rc=$?
-if [ "$rc" != "0" ]; then ok "bg setup without tmux installed errors gracefully (exit=$rc)"
-else fail "bg setup without tmux" "expected non-zero on no-tmux env, got 0"
+# bg setup behavior depends on whether tmux is available on this machine
+if command -v tmux >/dev/null 2>&1; then
+  $CMAX bg setup --session smoke-test-session >/dev/null 2>&1; rc=$?
+  if [ "$rc" = "0" ]; then ok "bg setup with tmux installed creates session"
+  else fail "bg setup with tmux installed" "expected exit 0, got $rc"
+  fi
+  tmux kill-session -t smoke-test-session 2>/dev/null || true
+else
+  $CMAX bg setup --session smoke-test-session >/dev/null 2>&1; rc=$?
+  if [ "$rc" != "0" ]; then ok "bg setup without tmux errors gracefully (exit=$rc)"
+  else fail "bg setup without tmux" "expected non-zero on no-tmux env, got 0"
+  fi
 fi
 
 # setup.sh exists and has --help
