@@ -1,0 +1,63 @@
+{
+  "name": "@claudemax/runtime",
+  "version": "0.2.0",
+  "description": "claudemax runtime — Claude Agent SDK orchestrator, multispec engine, Agent Teams driver, taste auto-bootstrap, /goal driver, blind verifier.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./orchestrator": "./dist/orchestrator.js",
+    "./goal": "./dist/goal.js",
+    "./verify": "./dist/verify.js",
+    "./prompts": "./dist/prompts.js",
+    "./multispec": "./dist/multispec.js",
+    "./agent-teams": "./dist/agent-teams.js",
+    "./deepresearch": "./dist/deepresearch.js",
+    "./taste": "./dist/taste.js",
+    "./hive": "./dist/hive.js",
+    "./council": "./dist/council.js",
+    "./agent-factory": "./dist/agent-factory.js",
+    "./overnight": "./dist/overnight.js",
+    "./billing": "./dist/billing.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.145",
+    "@claudemax/core": "workspace:*",
+    "@claudemax/memory": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitdeadai/claudemax",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/runtime#readme",
+  "bugs": "https://github.com/waitdeadai/claudemax/issues",
+  "keywords": ["claudemax", "claude", "anthropic", "claude-agent-sdk", "multispec", "agent-teams", "autonomous"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

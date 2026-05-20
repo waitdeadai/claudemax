@@ -1,0 +1,51 @@
+{
+  "name": "claudemax",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Anthropic-native power-user harness for effective completion of software work. Spec-driven, model-routed, max-parallel, validated-loop autonomy, independently verified. Tuned for Claude Max subscribers.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.0.8",
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/* build",
+    "typecheck": "pnpm -r --filter=./packages/* typecheck",
+    "test": "pnpm -r --filter=./packages/* test",
+    "smoke": "bash scripts/smoke.sh",
+    "cmax": "node packages/cli/dist/index.js",
+    "dev": "pnpm -r --parallel --filter=./packages/* dev",
+    "clean": "pnpm -r exec rm -rf dist node_modules/.cache && rm -rf node_modules",
+    "dark-patterns:sync": "[ -d vendor/llm-dark-patterns/.git ] && git -C vendor/llm-dark-patterns pull --ff-only || (mkdir -p vendor && git clone --depth 1 https://github.com/waitdeadai/llm-dark-patterns.git vendor/llm-dark-patterns)",
+    "postinstall": "node -e \"const{existsSync}=require('fs');if(!existsSync('vendor/llm-dark-patterns'))console.warn('  hint: run `pnpm dark-patterns:sync` to bundle llm-dark-patterns hooks');\"",
+    "release:check": "pnpm build && pnpm test && pnpm smoke",
+    "release:publish": "pnpm release:check && pnpm -r --filter=./packages/* --access public publish"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitdeadai/claudemax"
+  },
+  "homepage": "https://github.com/waitdeadai/claudemax#readme",
+  "bugs": "https://github.com/waitdeadai/claudemax/issues",
+  "keywords": [
+    "claude",
+    "anthropic",
+    "agent",
+    "harness",
+    "claude-code",
+    "claude-agent-sdk",
+    "claude-max",
+    "spec-driven",
+    "multispec",
+    "agent-teams",
+    "autonomous",
+    "max-parallel"
+  ]
+}

@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: build · test · smoke
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: setup node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'pnpm'
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm build
+        run: pnpm build
+
+      - name: pnpm test (unit)
+        run: pnpm test
+
+      - name: smoke (CLI surface)
+        env:
+          CMAX_SKIP_CLI_PROBE: '1'
+        run: bash scripts/smoke.sh
+
+  shellcheck:
+    name: shellcheck hooks + scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
+      - name: run shellcheck on hooks + scripts
+        run: |
+          shellcheck -x .claude/hooks/cmax-*.sh scripts/*.sh setup.sh || true
+          # advisory only for now; flip to `shellcheck -e SC2086 -e SC1091` and drop `|| true` when stable
+
+  typecheck:
+    name: typecheck (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck

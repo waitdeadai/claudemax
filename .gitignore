@@ -1,0 +1,23 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.log
+.idea/
+.vscode/
+.taste/workflow-runs/
+
+# Per-machine state — never committed
+**/.claudemax/
+**/.no-amnesia/
+**/memory.sqlite
+**/memory.sqlite-*
+**/setup.sh.sha256
+coverage/
+.turbo/
+
+# Vendored sibling repo (cloned by setup.sh; sync via pnpm dark-patterns:sync)
+vendor/

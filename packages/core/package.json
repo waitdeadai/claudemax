@@ -1,0 +1,52 @@
+{
+  "name": "@claudemax/core",
+  "version": "0.2.0",
+  "description": "claudemax core — model registry, router, multispec schema, plan-aware cost.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./router": "./dist/router.js",
+    "./spec": "./dist/spec.js",
+    "./models": "./dist/models.js",
+    "./cost": "./dist/cost.js",
+    "./types": "./dist/types.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitdeadai/claudemax",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/core#readme",
+  "bugs": "https://github.com/waitdeadai/claudemax/issues",
+  "keywords": ["claudemax", "claude", "anthropic", "router", "multispec", "model-routing"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

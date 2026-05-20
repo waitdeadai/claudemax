@@ -1,0 +1,49 @@
+{
+  "name": "@claudemax/memory",
+  "version": "0.2.0",
+  "description": "claudemax persistent memory — SQLite + FTS5 store with research_sources, taste_history, sub_specs, runs, decisions, errors, patterns, episodes.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitdeadai/claudemax",
+    "directory": "packages/memory"
+  },
+  "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/memory#readme",
+  "bugs": "https://github.com/waitdeadai/claudemax/issues",
+  "keywords": ["claudemax", "memory", "sqlite", "fts5", "agent-memory"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

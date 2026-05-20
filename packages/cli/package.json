@@ -1,0 +1,49 @@
+{
+  "name": "@claudemax/cli",
+  "version": "0.2.0",
+  "description": "claudemax CLI — cmax binary. Multispec pipeline, plan-aware billing, remote-from-phone orchestration, taste auto-bootstrap.",
+  "type": "module",
+  "bin": {
+    "cmax": "./dist/index.js",
+    "claudemax": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@claudemax/core": "workspace:*",
+    "@claudemax/memory": "workspace:*",
+    "@claudemax/runtime": "workspace:*",
+    "commander": "^14.0.3",
+    "kleur": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitdeadai/claudemax",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/waitdeadai/claudemax#readme",
+  "bugs": "https://github.com/waitdeadai/claudemax/issues",
+  "keywords": ["claudemax", "cmax", "claude", "anthropic", "cli", "agent-harness", "multispec", "autonomous"],
+  "publishConfig": {
+    "access": "public"
+  }
+}
