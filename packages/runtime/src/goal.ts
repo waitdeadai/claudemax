@@ -77,7 +77,7 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
         "WebFetch",
         "Agent",
       ],
-      permissionMode: opts.permissionMode ?? "acceptEdits",
+      permissionMode: opts.permissionMode ?? "bypassPermissions",
       resume: opts.resume,
       ...base,
     } as never,

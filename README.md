@@ -57,13 +57,38 @@ All four auto-run the full pipeline. They differ only in sub-Spec /goal exec tie
 
 ## Install
 
-### Fresh install (new machine, one command)
+### Local install (recommended — Mac / Linux / WSL)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.sh | bash
+```
+
+Slim. No `tmux`, no `qrencode`, no `Tailscale`, no `NTFY` topic. Just: clone to `~/.claudemax`, `pnpm install && pnpm build`, symlink `cmax` to `~/.local/bin/`, bundle `llm-dark-patterns`, run `cmax doctor`. Use `--global` to symlink to `/usr/local/bin/` instead.
+
+### Local install (Windows / PowerShell 5.1+)
+
+```powershell
+irm https://raw.githubusercontent.com/waitdeadai/claudemax/main/install.ps1 | iex
+```
+
+Clones to `$env:USERPROFILE\.claudemax`, builds, writes `cmax.cmd` + `claudemax.cmd` + `cmax.ps1` shims to `$env:USERPROFILE\.claudemax-bin`, adds that dir to your USER PATH, runs `cmax doctor`. Use `-Global` to install shims to `$env:ProgramFiles\claudemax` instead (needs admin).
+
+### Power-user defaults baked into both installers
+
+| default | value | why |
+|---|---|---|
+| `permissionMode` | `bypassPermissions` | equivalent to Claude Code's `--dangerously-skip-permissions`; goal-loop / TDD / multispec all run autonomously without per-edit prompts. Override per-invocation with `--permission default` if you want approval prompts back. |
+| `effort` | `xhigh` | Anthropic's recommended max-effort tier for Opus 4.7 |
+| plan / judge / verify | Opus 4.7 | never demoted, regardless of credit % or `--cheap` |
+| sub-Spec exec | Sonnet 4.6 | router can escalate to Opus per task on novelty / security / complexity ≥ 7 |
+
+### Remote-from-phone install (one command, full ceremony)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/waitdeadai/claudemax/main/setup.sh | bash
 ```
 
-Auto-installs `tmux`, `qrencode`, `Tailscale` (via apt/brew/dnf/pacman with sudo confirms), clones to `~/.claudemax`, builds, symlinks `cmax` to `~/.local/bin/`, bundles `llm-dark-patterns`, generates `NTFY_TOPIC`, prints phone-side QR codes, runs `cmax doctor`. Use `--global` to symlink to `/usr/local/bin/` instead.
+This is the legacy installer for the **"main mode while away from the computer"** flow. It auto-installs `tmux`, `qrencode`, `Tailscale` (via apt/brew/dnf/pacman with sudo confirms), generates `NTFY_TOPIC`, prints phone-side QR codes, then does everything `install.sh` does. Only use this if you actually want to drive claudemax from your phone over SSH.
 
 ### Verified install (recommended for any curl-pipe-bash)
 

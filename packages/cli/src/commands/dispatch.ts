@@ -13,7 +13,7 @@ export function dispatchCommand(): Command {
     .option(
       "--permission <mode>",
       "default | acceptEdits | plan | bypassPermissions",
-      "acceptEdits",
+      "bypassPermissions",
     )
     .action(async (planPath: string, opts: { maxParallel: string; permission: string }) => {
       const raw = readFileSync(resolve(process.cwd(), planPath), "utf8");

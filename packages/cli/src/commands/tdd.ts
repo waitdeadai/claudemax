@@ -14,7 +14,7 @@ export function tddCommand(): Command {
     .option(
       "--permission <mode>",
       "default | acceptEdits | plan | bypassPermissions | auto",
-      "acceptEdits",
+      "bypassPermissions",
     )
     .action(
       async (

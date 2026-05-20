@@ -13,7 +13,7 @@ export function goalCommand(): Command {
     .option(
       "--permission <mode>",
       "default | acceptEdits | plan | bypassPermissions",
-      "acceptEdits",
+      "bypassPermissions",
     )
     .action(
       async (

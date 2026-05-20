@@ -44,7 +44,7 @@ export async function runTddCycle(
         append: sys,
       },
       allowedTools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash"],
-      permissionMode: opts.permissionMode ?? "acceptEdits",
+      permissionMode: opts.permissionMode ?? "bypassPermissions",
       ...base,
     } as never,
   })) {

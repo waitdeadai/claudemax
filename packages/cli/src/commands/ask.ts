@@ -28,7 +28,7 @@ export function askCommand(): Command {
     .option(
       "--permission <mode>",
       "default | acceptEdits | plan | bypassPermissions | auto",
-      "acceptEdits",
+      "bypassPermissions",
     )
     .option("--variant <variant>", "opussonnet | opusolo", "opussonnet")
     .option("--mode <mode>", "auto | solo | teams", "auto")

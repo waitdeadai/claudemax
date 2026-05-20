@@ -121,7 +121,7 @@ async function runPacket(
           append: PACKET_AGENT_SYSTEM(packet.title, specGoal),
         },
         allowedTools: [...decision.tools],
-        permissionMode: opts.permissionMode ?? "default",
+        permissionMode: opts.permissionMode ?? "bypassPermissions",
         ...base,
       } as never,
     })) {

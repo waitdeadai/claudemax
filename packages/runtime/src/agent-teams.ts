@@ -73,7 +73,7 @@ async function spawnTeammate(o: SpawnTeammateOptions): Promise<"finished" | "blo
   return new Promise((resolve) => {
     const child = spawn(
       "claude",
-      ["-p", prompt, "--permission-mode", "acceptEdits"],
+      ["-p", prompt, "--dangerously-skip-permissions"],
       {
         cwd: o.cwd,
         env: {
