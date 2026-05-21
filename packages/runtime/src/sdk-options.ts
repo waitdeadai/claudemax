@@ -115,6 +115,52 @@ export interface CacheTokenStats {
   readonly cacheWrite1hTokens: number;
 }
 
+// SDK v0.3.145+ with outputFormat:{type:"json_schema",schema:...} emits the
+// parsed JSON via two new shapes:
+//   - result message: { type:"result", structured_output: {...parsed JSON...} }
+//   - assistant message: { type:"assistant", message:{ content:[{ type:"tool_use",
+//                          name:"StructuredOutput", input:{...parsed JSON...} }] } }
+// The legacy `result.result` string field is now empty for json_schema callers.
+// Pre-v0.3.145 callers that parse `result.result` as a JSON string get nothing
+// and throw "<callsite> returned no JSON. Raw: " with empty trailing text.
+// This helper extracts the parsed JSON object from EITHER message shape; returns
+// null if the message isn't structured-output-bearing.
+export function extractStructuredOutput(
+  message: unknown,
+): Record<string, unknown> | null {
+  const m = message as {
+    type?: string;
+    structured_output?: unknown;
+    message?: {
+      content?: Array<{
+        type?: string;
+        name?: string;
+        input?: unknown;
+      }>;
+    };
+  };
+  if (
+    m.type === "result" &&
+    m.structured_output &&
+    typeof m.structured_output === "object"
+  ) {
+    return m.structured_output as Record<string, unknown>;
+  }
+  if (m.type === "assistant" && Array.isArray(m.message?.content)) {
+    for (const block of m.message.content) {
+      if (
+        block.type === "tool_use" &&
+        block.name === "StructuredOutput" &&
+        block.input &&
+        typeof block.input === "object"
+      ) {
+        return block.input as Record<string, unknown>;
+      }
+    }
+  }
+  return null;
+}
+
 export function parseUsageWithCache(usage: unknown): CacheTokenStats {
   const u = (usage ?? {}) as {
     input_tokens?: number;

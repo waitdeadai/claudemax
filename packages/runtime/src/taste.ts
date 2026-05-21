@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { MODELS } from "@claudemax/core";
 import { deepResearch } from "./deepresearch.js";
+import { extractStructuredOutput } from "./sdk-options.js";
 
 export interface TasteBootstrapOptions {
   readonly cwd: string;
@@ -136,6 +137,7 @@ export async function autoBootstrapTaste(
   };
 
   let finalResult = "";
+  let structured: Record<string, unknown> | null = null;
   for await (const message of query({
     prompt: `Synthesize taste.md and taste.vision from the following inputs:\n\n${JSON.stringify(synthesisInput, null, 2)}\n\nReturn the JSON object.`,
     options: {
@@ -164,13 +166,19 @@ export async function autoBootstrapTaste(
       },
     } as never,
   })) {
+    if (!structured) structured = extractStructuredOutput(message);
     const m = message as { type?: string; result?: string };
     if (m.type === "result" && typeof m.result === "string") finalResult = m.result;
   }
 
-  const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
-  if (!jsonMatch) throw new Error(`taste synthesis returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
-  const obj = JSON.parse(jsonMatch[0]) as { tasteMd: string; tasteVision: string };
+  let obj: { tasteMd: string; tasteVision: string };
+  if (structured) {
+    obj = structured as unknown as { tasteMd: string; tasteVision: string };
+  } else {
+    const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
+    if (!jsonMatch) throw new Error(`taste synthesis returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
+    obj = JSON.parse(jsonMatch[0]) as { tasteMd: string; tasteVision: string };
+  }
 
   const tastePath = join(opts.cwd, "taste.md");
   const visionPath = join(opts.cwd, "taste.vision");

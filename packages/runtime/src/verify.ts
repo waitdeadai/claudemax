@@ -7,7 +7,12 @@ import {
   type VerificationReport,
 } from "@claudemax/core";
 import { VERIFIER_SYSTEM } from "./prompts.js";
-import { baseSdkOptions, parseUsageWithCache, type EffortLevel } from "./sdk-options.js";
+import {
+  baseSdkOptions,
+  extractStructuredOutput,
+  parseUsageWithCache,
+  type EffortLevel,
+} from "./sdk-options.js";
 import { runInteractiveVerify } from "./interactive-verify.js";
 
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.8;
@@ -93,6 +98,7 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
         .join("\n")}\n\nWhen judging a completion condition that has an interactive probe, weigh the probe result as first-hand evidence and assign confidence 0.95+ unless you have a specific reason to doubt it.`
     : "";
 
+  let structured: Record<string, unknown> | null = null;
   for await (const message of query({
     prompt:
       `Verify the SPEC was met. Read the repo, run checks, then output the JSON object exactly as specified.${interactiveSection}`,
@@ -109,6 +115,7 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
       ...base,
     } as never,
   })) {
+    if (!structured) structured = extractStructuredOutput(message);
     const m = message as { type?: string; result?: string; usage?: unknown };
     if (m.type === "result" && typeof m.result === "string") {
       finalResult = m.result;
@@ -116,7 +123,13 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
     }
   }
 
-  const parsed = extractFindings(finalResult);
+  const parsed = structured
+    ? ({
+        findings: (structured["perCondition"] ?? []) as readonly RawFinding[],
+        verdict: (structured["verdict"] ?? "failed") as "verified" | "partial" | "failed",
+        notes: String(structured["notes"] ?? ""),
+      } as ExtractedFindings)
+    : extractFindings(finalResult);
   if (!parsed) {
     const failed: VerificationFinding[] = spec.completionConditions.map((c) => ({
       id: c.id,

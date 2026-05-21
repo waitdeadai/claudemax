@@ -10,6 +10,7 @@ import {
   type VerificationReport,
   type MultiSpecVerification,
 } from "@claudemax/core";
+import { extractStructuredOutput } from "./sdk-options.js";
 
 const MULTISPEC_JSON_SCHEMA = {
   type: "object",
@@ -111,6 +112,7 @@ export async function decomposeIntoMultiSpec(
   const userMsg = `Decompose this root goal into a MultiSpec:\n\nROOT GOAL: ${rootGoal}${briefSection}\n\nProduce 2–12 sub-Specs, each independently verifiable with measurable completion conditions. Annotate each sub-Spec's write-set (files it will modify) so the engine can detect overlap. Define the DAG of dependencies (sub-Spec A depends on sub-Spec B). Add rollup completion conditions that verify the combined goal.\n\nReturn only the JSON object.`;
 
   let finalResult = "";
+  let structured: Record<string, unknown> | null = null;
 
   for await (const message of query({
     prompt: userMsg,
@@ -129,13 +131,19 @@ export async function decomposeIntoMultiSpec(
       outputFormat: { type: "json_schema", schema: MULTISPEC_JSON_SCHEMA },
     } as never,
   })) {
+    if (!structured) structured = extractStructuredOutput(message);
     const m = message as { type?: string; result?: string };
     if (m.type === "result" && typeof m.result === "string") finalResult = m.result;
   }
 
-  const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
-  if (!jsonMatch) throw new Error(`multispec decomposer returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
-  const obj = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  let obj: Record<string, unknown>;
+  if (structured) {
+    obj = structured;
+  } else {
+    const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
+    if (!jsonMatch) throw new Error(`multispec decomposer returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
+    obj = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  }
 
   const now = new Date().toISOString();
   const subSpecs = (obj["subSpecs"] as unknown[]).map((s, i) => {

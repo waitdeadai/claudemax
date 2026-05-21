@@ -1,6 +1,7 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { MODELS, parseSpec, type Spec } from "@claudemax/core";
 import { SPEC_WRITER_SYSTEM } from "./prompts.js";
+import { extractStructuredOutput } from "./sdk-options.js";
 
 export interface SpecWriteOptions {
   readonly cwd?: string;
@@ -58,6 +59,7 @@ export async function writeSpec(goal: string, opts: SpecWriteOptions = {}): Prom
     : `User goal:\n${goal}\n\nReturn the JSON spec object.`;
 
   let finalResult = "";
+  let structured: Record<string, unknown> | null = null;
 
   for await (const message of query({
     prompt: userMsg,
@@ -76,17 +78,23 @@ export async function writeSpec(goal: string, opts: SpecWriteOptions = {}): Prom
       outputFormat: { type: "json_schema", schema: SPEC_JSON_SCHEMA },
     } as never,
   })) {
+    if (!structured) structured = extractStructuredOutput(message);
     const m = message as { type?: string; result?: string };
     if (m.type === "result" && typeof m.result === "string") {
       finalResult = m.result;
     }
   }
 
-  const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
-  if (!jsonMatch) {
-    throw new Error(`spec writer returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
+  let obj: Record<string, unknown>;
+  if (structured) {
+    obj = structured;
+  } else {
+    const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
+    if (!jsonMatch) {
+      throw new Error(`spec writer returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
+    }
+    obj = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
   }
-  const obj = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
   if (!obj["createdAt"]) obj["createdAt"] = new Date().toISOString();
   return parseSpec(obj);
 }

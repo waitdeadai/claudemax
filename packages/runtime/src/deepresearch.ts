@@ -1,5 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { MODELS, type ResearchBrief, type ResearchSource } from "@claudemax/core";
+import { extractStructuredOutput } from "./sdk-options.js";
 
 export interface DeepResearchOptions {
   readonly cwd?: string;
@@ -59,6 +60,7 @@ export async function deepResearch(
   const maxSources = opts.maxSources ?? 12;
 
   let finalResult = "";
+  let structured: Record<string, unknown> | null = null;
 
   for await (const message of query({
     prompt: `Topic: ${topic}\n\nReturn the JSON ResearchBrief. Cap sources at ${maxSources}.`,
@@ -79,13 +81,19 @@ export async function deepResearch(
       outputFormat: { type: "json_schema", schema: RESEARCH_JSON_SCHEMA },
     } as never,
   })) {
+    if (!structured) structured = extractStructuredOutput(message);
     const m = message as { type?: string; result?: string };
     if (m.type === "result" && typeof m.result === "string") finalResult = m.result;
   }
 
-  const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
-  if (!jsonMatch) throw new Error(`deepResearch returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
-  const obj = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  let obj: Record<string, unknown>;
+  if (structured) {
+    obj = structured;
+  } else {
+    const jsonMatch = /\{[\s\S]*\}/.exec(finalResult);
+    if (!jsonMatch) throw new Error(`deepResearch returned no JSON. Raw:\n${finalResult.slice(0, 500)}`);
+    obj = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  }
 
   const sources: ResearchSource[] = ((obj["sources"] as unknown[]) ?? []).map((s) => {
     const sr = s as Record<string, unknown>;
