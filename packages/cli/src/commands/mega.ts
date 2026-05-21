@@ -174,11 +174,12 @@ export async function driveLanes(
 
       const checkSaturation = (chunk: string, stream: string): void => {
         if (saturationPause) return;
-        // Anthropic-side burst protection emits "temporarily limiting requests
-        // (not your usage limit)"; user-pool exhaustion emits "Rate limited" /
-        // "usage limit". Treat both as pause-not-fail so resume can pick up.
+        // Three observed Anthropic throttle signals (all should pause-not-fail):
+        // (1) burst protection: "temporarily limiting requests (not your usage limit)"
+        // (2) Max subscription pool: "You've hit your session limit · resets <Xpm>"
+        // (3) generic: rate-limit / 429 / exceeded / saturation / usage limit
         if (
-          /temporarily limiting requests|rate.?limit|429|exceeded|saturation|usage limit/i.test(
+          /session limit|temporarily limiting requests|rate.?limit|429|exceeded|saturation|usage limit|resets \d+\s*[ap]m/i.test(
             chunk.slice(-2000),
           )
         ) {
