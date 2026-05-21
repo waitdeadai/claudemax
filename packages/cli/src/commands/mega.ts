@@ -31,6 +31,7 @@ export function megaCommand(): Command {
     .option("--confidence <n>", "verifier confidence threshold", "0.85")
     .option("--mode <mode>", "auto | solo | teams", "auto")
     .option("--no-tdd", "skip TDD enforcement (default ON)")
+    .option("--stagger-ms <n>", "delay between consecutive lane spawns to avoid Anthropic burst-protection throttle", "5000")
     .option("--dry-run", "print derived lane count + plan, exit", false)
     .action(
       async (
@@ -42,6 +43,7 @@ export function megaCommand(): Command {
           confidence: string;
           mode: "auto" | "solo" | "teams";
           tdd: boolean;
+          staggerMs: string;
           dryRun: boolean;
         },
       ) => {
@@ -135,11 +137,14 @@ function dedupSlug(goal: string, idx: number, seen: Set<string>): string {
 export async function driveLanes(
   initialStateArg: ResumableState,
   maxParallel: number,
-  opts: { variant: string; confidence: string; mode: string; tdd: boolean },
+  opts: { variant: string; confidence: string; mode: string; tdd: boolean; staggerMs?: number | string },
 ): Promise<void> {
   let state = initialStateArg;
   const queue = Object.values(state.lanes).filter((l) => l.status === "pending" || l.status === "paused");
   const active = new Set<Promise<void>>();
+  const staggerMs = Math.max(0, Number(opts.staggerMs ?? 5000) || 0);
+  let lanesSpawned = 0;
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
   const spawnLane = (laneId: string): Promise<void> =>
     new Promise<void>((resolveP) => {
@@ -167,15 +172,27 @@ export async function driveLanes(
       let saturationPause = false;
       let pauseReason = "";
 
+      const checkSaturation = (chunk: string, stream: string): void => {
+        if (saturationPause) return;
+        // Anthropic-side burst protection emits "temporarily limiting requests
+        // (not your usage limit)"; user-pool exhaustion emits "Rate limited" /
+        // "usage limit". Treat both as pause-not-fail so resume can pick up.
+        if (
+          /temporarily limiting requests|rate.?limit|429|exceeded|saturation|usage limit/i.test(
+            chunk.slice(-2000),
+          )
+        ) {
+          saturationPause = true;
+          pauseReason = `rate-limit-shaped ${stream} signal`;
+        }
+      };
       child.stdout?.on("data", (b: Buffer) => {
         stdoutBuf += b.toString("utf8");
-        if (/rate.?limit|429|exceeded|saturation/i.test(stdoutBuf.slice(-2000)) && !saturationPause) {
-          saturationPause = true;
-          pauseReason = "rate-limit-shaped stdout signal";
-        }
+        checkSaturation(stdoutBuf, "stdout");
       });
       child.stderr?.on("data", (b: Buffer) => {
         stderrBuf += b.toString("utf8");
+        checkSaturation(stderrBuf, "stderr");
       });
       child.on("close", (code) => {
         const finishedAt = new Date().toISOString();
@@ -212,6 +229,10 @@ export async function driveLanes(
     while (queue.length > 0 || active.size > 0) {
       while (active.size < maxParallel && queue.length > 0) {
         const lane = queue.shift()!;
+        if (lanesSpawned > 0 && staggerMs > 0) {
+          await sleep(staggerMs);
+        }
+        lanesSpawned += 1;
         const p = spawnLane(lane.id).finally(() => active.delete(p));
         active.add(p);
       }
