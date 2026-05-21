@@ -17,7 +17,8 @@
 param(
   [string]$InstallDir = (Join-Path $env:USERPROFILE ".claudemax"),
   [switch]$Global,
-  [switch]$NoAlias
+  [switch]$NoAlias,
+  [switch]$NoUserInit
 )
 
 $ErrorActionPreference = "Stop"
@@ -150,6 +151,24 @@ $configPath = Join-Path $configDir "config.json"
 }
 "@ | Set-Content -Encoding UTF8 $configPath
 Ok "wrote $configPath (mode=local — no remote, no ntfy)"
+
+Head "user-level skill install (run 'claude' from anywhere → /cmax, /ask, /tdd, etc.)"
+$userSkillsCmax = Join-Path $env:USERPROFILE ".claude\skills\cmax"
+if ($NoUserInit.IsPresent) {
+  Warn "skipped (-NoUserInit). Run later with: cmax init --target ~ --force"
+} elseif (Test-Path $userSkillsCmax) {
+  Ok "user-level skills already present at $userSkillsCmax"
+  Warn "refresh anytime with: cmax init --target ~ --force"
+} else {
+  try {
+    node $binSrc init --target $env:USERPROFILE
+    if (Test-Path $userSkillsCmax) {
+      Ok "wrote $env:USERPROFILE\.claude\skills\ (slash commands now available in EVERY claude session)"
+    }
+  } catch {
+    Warn "user-level init failed; you can retry: cmax init --target ~ --force"
+  }
+}
 
 Head "cmax doctor"
 try { node $binSrc doctor } catch { Warn "cmax doctor failed; new shell may be needed" }

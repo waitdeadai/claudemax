@@ -22,6 +22,7 @@ INSTALL_DIR="${INSTALL_DIR:-$HOME/.claudemax}"
 GLOBAL_LINK=false
 NO_PROMPT=false
 NO_ALIAS=false
+NO_USER_INIT=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,6 +30,7 @@ while [ $# -gt 0 ]; do
     --global) GLOBAL_LINK=true; shift ;;
     --no-prompt) NO_PROMPT=true; shift ;;
     --no-alias) NO_ALIAS=true; shift ;;
+    --no-user-init) NO_USER_INIT=true; shift ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "! unknown flag: $1"; exit 1 ;;
   esac
@@ -143,6 +145,19 @@ cat > "$CONFIG_DIR/config.json" <<EOF
 }
 EOF
 ok "wrote $CONFIG_DIR/config.json (mode=local — no remote, no ntfy)"
+
+head "user-level skill install (run \`claude\` from anywhere → /cmax, /ask, /tdd, etc.)"
+if [ "$NO_USER_INIT" = true ]; then
+  warn "skipped (--no-user-init). Run later with: cmax init --target ~ --force"
+elif [ -d "$HOME/.claude/skills/cmax" ]; then
+  ok "user-level skills already present at ~/.claude/skills/cmax"
+  warn "refresh anytime with: cmax init --target ~ --force"
+else
+  "$BIN_SRC" init --target "$HOME" 2>&1 | sed 's/^/  /' || warn "user-level init returned non-zero; you can retry: cmax init --target ~ --force"
+  if [ -d "$HOME/.claude/skills/cmax" ]; then
+    ok "wrote ~/.claude/skills/ (slash commands now available in EVERY claude session, not just project-init'd ones)"
+  fi
+fi
 
 head "cmax doctor"
 "$BIN_SRC" doctor || true
