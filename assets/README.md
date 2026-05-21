@@ -6,8 +6,8 @@ Apache-2.0 (same as the project). Use freely; attribution appreciated.
 
 | File | Use |
 |---|---|
-| `og-image.png` | **GitHub social-preview / Open Graph card.** 1774 × 887 (2:1), mascot + `claudemax` wordmark + tagline on deep-ink background. Upload via GitHub Settings → General → Social preview. Also used as the README hero. |
-| `claudemax.png` | **The official claudemax mascot.** Pixel-art electric-cyan creature with two eyes and 8-directional spike protrusions. Transparent background. Use as project icon, favicon, avatar — anywhere the wordmark would be redundant. |
+| `claudemax.png` | **The official claudemax mascot — README hero.** Pixel-art electric-cyan creature with two eyes and 8-directional spike protrusions. Transparent background. Used at the top of `README.md` (centered, 200px). Also the project icon / favicon / avatar. |
+| `og-image.png` | **GitHub social-preview / Open Graph card.** 1774 × 887 (2:1), mascot + `claudemax` wordmark + tagline on deep-ink background. Upload via GitHub Settings → General → Social preview so it renders on Twitter/X/Slack/Discord/LinkedIn link previews. Independent from the README hero — both can coexist. |
 | `README.md` | This file — palette + usage notes. |
 
 ## Mascot

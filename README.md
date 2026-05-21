@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/og-image.png" alt="claudemax — Anthropic-native power-user harness for Claude Max" width="100%">
+  <img src="./assets/claudemax.png" alt="claudemax mascot" width="200">
 </p>
 
 <h1 align="center">claudemax</h1>
