@@ -130,7 +130,7 @@ export async function runMultiOrchestrator(
     new Promise<void>((resolveP) => {
       const recordCwd = g.cwd ?? cwd;
       records.set(g.id, { ...records.get(g.id)!, status: "running", startedAt: Date.now() });
-      const args = ["ask", g.goal];
+      const args = ["run", g.goal];
       if (opts.tdd) args.push("--tdd");
       if (opts.confidence != null) args.push("--confidence", String(opts.confidence));
       if (opts.variant) args.push("--variant", opts.variant);

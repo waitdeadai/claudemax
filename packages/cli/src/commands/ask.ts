@@ -65,7 +65,13 @@ export function askCommand(): Command {
       console.log();
 
       const runCmd = runCommand();
-      const argv = ["node", "cmax", "run", goal];
+      // Bug fix: when parseAsync is called on the `run` subcommand directly,
+      // it expects argv in node format ["node","script", ...args]. The argv
+      // strips the first two then parses the REST as the run command's args.
+      // Including "run" in argv made commander interpret "run" as the goal
+      // positional and the real goal as a second positional → "too many
+      // arguments. Expected 1 argument but got 2."
+      const argv = ["node", "cmax", goal];
       for (const [k, v] of Object.entries(opts)) {
         if (typeof v === "boolean") {
           if (k === "research" && v === false) argv.push("--no-research");
