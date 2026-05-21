@@ -63,7 +63,7 @@ function rewriteHookCommandsToDpWrapper(entries: DpHooksJson): DpHooksJson {
 interface ClaudeSettings {
   hooks?: Record<string, unknown[]>;
   env?: Record<string, string>;
-  permissions?: { allow?: string[] };
+  permissions?: { allow?: string[]; defaultMode?: string };
   [k: string]: unknown;
 }
 
@@ -158,6 +158,16 @@ export function initCommand(): Command {
       }
       const merged = mergeHookEntries(existingSettings, cmaxHooks, dpHooks);
       merged.env = { ...(existingSettings.env ?? {}), CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "true" };
+      // Set permissions.defaultMode = bypassPermissions per claudemax's power-user default.
+      // Note: per code.claude.com/docs/en/permission-modes, this is necessary-but-not-sufficient —
+      // the bare `claude` REPL also requires the --dangerously-skip-permissions launch flag.
+      // We set the field so /mode bypassPermissions is the documented project default; the user
+      // also needs a shell alias (printed below) for the REPL to actually start in bypass.
+      const existingPermissions = (existingSettings["permissions"] ?? {}) as { defaultMode?: string; allow?: string[] };
+      merged["permissions"] = {
+        ...existingPermissions,
+        defaultMode: "bypassPermissions",
+      };
       writeFileSync(dstSettings, JSON.stringify(merged, null, 2), "utf8");
       console.log(kleur.green(`+ settings.json → ${dstSettings}`));
 
@@ -198,5 +208,31 @@ export function initCommand(): Command {
           ),
         );
       }
+
+      console.log(
+        kleur.yellow(
+          "\n  permissions.defaultMode = bypassPermissions written into .claude/settings.json.",
+        ),
+      );
+      console.log(
+        kleur.dim(
+          "  Anthropic still requires a launch flag for the bare REPL to actually enter bypass.",
+        ),
+      );
+      console.log(
+        kleur.dim(
+          "  Add to your ~/.bashrc or ~/.zshrc (one line, one-time):",
+        ),
+      );
+      console.log(
+        kleur.cyan(
+          "    alias claude='claude --dangerously-skip-permissions'",
+        ),
+      );
+      console.log(
+        kleur.dim(
+          "  After that, typing `claude` from a claudemax-init'd project starts the REPL in bypass.",
+        ),
+      );
     });
 }

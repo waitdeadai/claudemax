@@ -161,4 +161,14 @@ Skills installed:    $INSTALL_DIR/skills/   (28 skills, lean catalog)
 Docs:                $INSTALL_DIR/docs/QUICKSTART.md
 
 For the remote-from-phone flow (Tailscale + tmux + ntfy + QR onboarding), run setup.sh instead.
+
+==> One more thing — make bare \`claude\` REPL start in bypass-permissions mode
+
+claudemax's bypassPermissions default applies to \`cmax ask\`, \`cmax run\`, \`cmax goal\`, etc.
+The bare \`claude\` REPL needs Anthropic's launch flag (their docs explicitly gate bypass
+behind a launch flag — settings.json alone is not enough). One-time setup:
+
+  echo "alias claude='claude --dangerously-skip-permissions'" >> ~/.bashrc
+  # or  ~/.zshrc  if you're on zsh
+  # then: source ~/.bashrc   (or open a new shell)
 EOF

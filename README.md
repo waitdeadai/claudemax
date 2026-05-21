@@ -204,6 +204,28 @@ cmax tdd SPEC.md --permission default
 
 Same `--permission default` flag exists on `cmax dispatch`. Inside a project, you can also set `"permissions"` in `.claude/settings.json` to constrain what tools the model can call at all.
 
+### Bare `claude` REPL — the launch-flag gate
+
+claudemax's `bypassPermissions` default only applies to `query()` calls coming from inside claudemax (i.e., `cmax ask`, `cmax run`, `cmax goal`, `cmax tdd`, `cmax dispatch`). If you instead type `claude` directly in your terminal to start the bare Claude Code REPL, you're talking to Claude Code's own permission system — which gates `bypassPermissions` behind a **launch flag by design**.
+
+Per Anthropic's docs (`code.claude.com/docs/en/permission-modes`, accessed 2026-05-20): *"You cannot enter `bypassPermissions` from a session that was started without one of the enabling flags; restart with one to enable it."* This is intentional security — Anthropic does not allow project-level settings to silently disable approval prompts.
+
+`cmax init` writes `"permissions": { "defaultMode": "bypassPermissions" }` into the project's `.claude/settings.json` so the default mode is correctly declared, but that **alone is not enough** to start the REPL in bypass — Claude Code still requires the launch flag.
+
+To make `claude` start in bypass mode every time you type it, add one of these one-time setups:
+
+```bash
+# Shell alias (recommended) — add to ~/.bashrc or ~/.zshrc:
+alias claude='claude --dangerously-skip-permissions'
+
+# Or per-invocation:
+claude --dangerously-skip-permissions
+```
+
+For the Claude Code **VS Code extension**, you need both: enable **"Allow dangerously skip permissions"** in the extension settings panel, and set `"claudeCode.initialPermissionMode": "bypassPermissions"` in VS Code settings.
+
+Settings precedence per Anthropic docs (most → least authoritative): managed settings → CLI flags → `.claude/settings.local.json` → `.claude/settings.json` → `~/.claude/settings.json`. Deny rules from any level win over allow rules at any level.
+
 ### When to keep the default
 
 - You're driving claudemax on your own dev machine, in repos you own, against goals you've reviewed.

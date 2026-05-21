@@ -38,9 +38,11 @@
     "env": {
       "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "true"
     },
-    "defaultPermissionMode": "bypassPermissions",
+    "permissions": {
+      "defaultMode": "bypassPermissions"
+    },
     "defaultEffort": "xhigh",
     "neverDemote": ["verify", "spec", "architect"]
   },
-  "_schemaNote": "This manifest follows the Claude Code plugin format introduced in v2.1.129 (https://github.com/anthropics/claude-code/blob/main/plugins/README.md). Field names are best-effort against public docs as of 2026-05-20; validate with `claude plugin validate plugin.json` once that command stabilizes. Plugin marketplace publication path: https://claudemarketplaces.com/"
+  "_schemaNote": "permissions.defaultMode is the canonical field per code.claude.com/docs/en/permissions (accessed 2026-05-20). NOTE: bypassPermissions in settings.json is necessary-but-not-sufficient — per code.claude.com/docs/en/permission-modes, the bare `claude` REPL still requires --dangerously-skip-permissions (or equivalent) on the launch CLI to actually enter bypass. Anthropic gates the bypass mode behind a launch flag by design. For 'type claude in terminal and skip permissions', users must add a shell alias: alias claude='claude --dangerously-skip-permissions'. The rest of this manifest follows the Claude Code plugin format introduced in v2.1.129; validate with `claude plugin validate plugin.json` once that command stabilizes. Plugin marketplace publication path: https://claudemarketplaces.com/"
 }

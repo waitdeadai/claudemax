@@ -165,6 +165,17 @@ Power-user defaults baked in:
   - plan/judge/verify   Opus 4.7               (never demoted)
   - sub-Spec exec       Sonnet 4.6             (router can escalate to Opus per task)
 
-Skills installed:    $InstallDir\skills\   (28 skills, lean catalog)
+Skills installed:    $InstallDir\skills\   (29 active skills, lean catalog)
 Docs:                $InstallDir\docs\QUICKSTART.md
+
+==> One more thing - make bare 'claude' REPL start in bypass-permissions mode
+
+claudemax's bypassPermissions default applies to 'cmax ask', 'cmax run', etc.
+The bare 'claude' REPL needs Anthropic's launch flag (their docs explicitly gate
+bypass behind a launch flag - settings.json alone is not enough). One-time setup
+for PowerShell - add to your `$PROFILE`:
+
+  function claude { & claude.cmd --dangerously-skip-permissions @args }
+
+Then: . `$PROFILE   (or open a new PowerShell)
 "@ | Write-Host
