@@ -1,0 +1,13 @@
+[Unit]
+Description=cmax resume scheduler — fires periodically, no-op if nothing to resume
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30min
+RandomizedDelaySec=300
+AccuracySec=1min
+Persistent=true
+Unit=cmax-resume.service
+
+[Install]
+WantedBy=timers.target

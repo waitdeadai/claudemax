@@ -31,13 +31,15 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/spec` | Author a single SPEC.md with measurable completion conditions |
 | `/specqa` | Spec quality gate — every verifyHint must be mechanically checkable |
 
-### Execution (6)
+### Execution (8)
 
 | Skill | Purpose |
 |---|---|
 | `/goal` | Autonomous /goal loop wrapping Claude Code's native validator-loop |
 | `/tdd` | Strict write-failing-test-first → implement → verify-passes cycle. Opt-in via `cmax ask "<goal>" --tdd` |
-| `/orchestrate` | Multi-goal harness — N parallel `cmax ask` pipelines for DIFFERENT goals; live status table + rollup verdict |
+| `/mega` | Session-limit-aware mega-build — N goals, auto-sized lanes from hardware × plan × free RAM, pauses on rate-limit saturation, resumable via `/resume`. Flagship for power users with many goals to ship. |
+| `/resume` | Pick up a paused `/mega` run. cron-friendly (exits 0 on no-op). Wire into systemd timer for fully-unattended resume across rate-limit windows. |
+| `/orchestrate` | Multi-goal harness — N parallel `cmax ask` pipelines for DIFFERENT goals; live status table + rollup verdict. No auto-sizing (use /mega for that). |
 | `/parallel` | Distinct-packet fan-out (DispatchPlan) for ONE goal |
 | `/hive` | Same problem N times → merge proposals |
 | `/council` | 3-Opus adversarial debate (proposer / critic / judge) |

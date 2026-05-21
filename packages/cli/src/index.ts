@@ -19,6 +19,8 @@ import { updateCommand } from "./commands/update.js";
 import { askCommand } from "./commands/ask.js";
 import { tddCommand } from "./commands/tdd.js";
 import { orchestrateCommand } from "./commands/orchestrate.js";
+import { megaCommand } from "./commands/mega.js";
+import { resumeCommand } from "./commands/resume.js";
 
 const program = new Command();
 
@@ -29,6 +31,8 @@ program
 
 program.addCommand(askCommand());
 program.addCommand(orchestrateCommand());
+program.addCommand(megaCommand());
+program.addCommand(resumeCommand());
 program.addCommand(runCommand());
 program.addCommand(doctorCommand());
 program.addCommand(tasteCommand());

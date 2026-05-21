@@ -17,3 +17,6 @@ export * from "./handoff.js";
 export * from "./interactive-verify.js";
 export * from "./tdd.js";
 export * from "./orchestrator-multi.js";
+export * from "./hardware.js";
+export * from "./saturation.js";
+export * from "./resumable.js";

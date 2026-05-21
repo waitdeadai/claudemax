@@ -1,0 +1,12 @@
+[Unit]
+Description=cmax resume — pick up the latest paused mega run
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/%u/.local/bin/cmax resume
+WorkingDirectory=/home/%u/waitdead-v2
+Environment=CMAX_PLAN=max20x
+Environment=PATH=/home/%u/.local/bin:/usr/local/bin:/usr/bin:/bin
+StandardOutput=append:/var/log/cmax-resume.log
+StandardError=append:/var/log/cmax-resume.log
