@@ -21,12 +21,14 @@ set -euo pipefail
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.claudemax}"
 GLOBAL_LINK=false
 NO_PROMPT=false
+NO_ALIAS=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --install-dir) INSTALL_DIR="$2"; shift 2 ;;
     --global) GLOBAL_LINK=true; shift ;;
     --no-prompt) NO_PROMPT=true; shift ;;
+    --no-alias) NO_ALIAS=true; shift ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "! unknown flag: $1"; exit 1 ;;
   esac
@@ -161,14 +163,38 @@ Skills installed:    $INSTALL_DIR/skills/   (28 skills, lean catalog)
 Docs:                $INSTALL_DIR/docs/QUICKSTART.md
 
 For the remote-from-phone flow (Tailscale + tmux + ntfy + QR onboarding), run setup.sh instead.
-
-==> One more thing — make bare \`claude\` REPL start in bypass-permissions mode
-
-claudemax's bypassPermissions default applies to \`cmax ask\`, \`cmax run\`, \`cmax goal\`, etc.
-The bare \`claude\` REPL needs Anthropic's launch flag (their docs explicitly gate bypass
-behind a launch flag — settings.json alone is not enough). One-time setup:
-
-  echo "alias claude='claude --dangerously-skip-permissions'" >> ~/.bashrc
-  # or  ~/.zshrc  if you're on zsh
-  # then: source ~/.bashrc   (or open a new shell)
 EOF
+
+# --- shell alias for bare claude REPL bypass ----------------------------------
+# Per code.claude.com/docs/en/permission-modes, the bare `claude` REPL gates
+# bypassPermissions behind a launch flag. settings.json alone is not enough.
+# This appends an alias to the user's shell rc so typing `claude` from now on
+# starts in bypass mode. Idempotent via the marker line. Skip with --no-alias.
+head "shell alias for bare \`claude\` REPL"
+if [ "$NO_ALIAS" = true ]; then
+  warn "skipped (--no-alias). Add manually: alias claude='claude --dangerously-skip-permissions'"
+else
+  ALIAS_MARKER="# claudemax: bypass-permissions alias for bare claude REPL"
+  ALIAS_LINE="alias claude='claude --dangerously-skip-permissions'"
+  SHELL_RC=""
+  case "${SHELL:-}" in
+    */zsh) SHELL_RC="$HOME/.zshrc" ;;
+    */bash) SHELL_RC="$HOME/.bashrc" ;;
+    *)
+      warn "shell \"${SHELL:-unknown}\" is not bash/zsh; add manually: $ALIAS_LINE"
+      SHELL_RC=""
+      ;;
+  esac
+  if [ -n "$SHELL_RC" ]; then
+    [ -f "$SHELL_RC" ] || touch "$SHELL_RC"
+    if grep -qF "$ALIAS_MARKER" "$SHELL_RC" 2>/dev/null; then
+      ok "alias already present in $SHELL_RC"
+    else
+      {
+        printf "\n%s\n%s\n" "$ALIAS_MARKER" "$ALIAS_LINE"
+      } >> "$SHELL_RC"
+      ok "appended bypass alias to $SHELL_RC"
+      warn "open a new shell OR run: source $SHELL_RC   (then \`claude\` starts in bypass)"
+    fi
+  fi
+fi

@@ -16,7 +16,8 @@
 [CmdletBinding()]
 param(
   [string]$InstallDir = (Join-Path $env:USERPROFILE ".claudemax"),
-  [switch]$Global
+  [switch]$Global,
+  [switch]$NoAlias
 )
 
 $ErrorActionPreference = "Stop"
@@ -167,15 +168,32 @@ Power-user defaults baked in:
 
 Skills installed:    $InstallDir\skills\   (29 active skills, lean catalog)
 Docs:                $InstallDir\docs\QUICKSTART.md
-
-==> One more thing - make bare 'claude' REPL start in bypass-permissions mode
-
-claudemax's bypassPermissions default applies to 'cmax ask', 'cmax run', etc.
-The bare 'claude' REPL needs Anthropic's launch flag (their docs explicitly gate
-bypass behind a launch flag - settings.json alone is not enough). One-time setup
-for PowerShell - add to your `$PROFILE`:
-
-  function claude { & claude.cmd --dangerously-skip-permissions @args }
-
-Then: . `$PROFILE   (or open a new PowerShell)
 "@ | Write-Host
+
+# --- PowerShell function for bare claude REPL bypass --------------------------
+# Per code.claude.com/docs/en/permission-modes, the bare `claude` REPL gates
+# bypassPermissions behind a launch flag. settings.json alone is not enough.
+# This appends a PowerShell function to $PROFILE so typing `claude` from now on
+# always passes --dangerously-skip-permissions. Idempotent via the marker line.
+Head "PowerShell function for bare 'claude' REPL"
+if ($NoAlias.IsPresent) {
+  Warn "skipped (-NoAlias). Add manually: function claude { & claude.cmd --dangerously-skip-permissions @args }"
+} else {
+  $profilePath = $PROFILE
+  $profileDir = Split-Path $profilePath
+  if (-not (Test-Path $profileDir)) {
+    New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+  }
+  if (-not (Test-Path $profilePath)) {
+    New-Item -ItemType File -Force -Path $profilePath | Out-Null
+  }
+  $marker = "# claudemax: bypass-permissions function for bare claude REPL"
+  $existing = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
+  if ($existing -and $existing.Contains($marker)) {
+    Ok "function already present in $profilePath"
+  } else {
+    Add-Content -Path $profilePath -Value "`n$marker`nfunction claude { & claude.cmd --dangerously-skip-permissions @args }"
+    Ok "appended bypass function to $profilePath"
+    Warn "open a new PowerShell OR run: . `$PROFILE   (then 'claude' starts in bypass)"
+  }
+}
