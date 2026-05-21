@@ -1,5 +1,7 @@
 import { MODELS } from "./models.js";
 import { budgetTag, estimatePacketCost } from "./cost.js";
+import { resolveBillingEra } from "./cost.js";
+import type { BillingEra } from "./types.js";
 import type {
   ModelTier,
   Plan,
@@ -79,6 +81,10 @@ export interface RouterOptions {
   readonly forceCheap?: boolean;
   readonly plan?: Plan;
   readonly creditConsumedUsd?: number;
+  // Defaults to resolveBillingEra() which returns "pre-split" before 2026-06-15
+  // and "post-split" after. In pre-split era the plan-budget demote path is a
+  // no-op because the monthly Agent SDK credit envelope doesn't exist yet.
+  readonly era?: BillingEra;
 }
 
 export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecision {
@@ -127,7 +133,8 @@ export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecisi
   }
 
   if (opts.plan && opts.creditConsumedUsd != null && tier === "opus" && !NEVER_DEMOTE.has(signal.class)) {
-    const tag = budgetTag(opts.plan, opts.creditConsumedUsd);
+    const era = opts.era ?? resolveBillingEra();
+    const tag = budgetTag(opts.plan, opts.creditConsumedUsd, era);
     if (tag === "danger" || tag === "blocked") {
       const sonnetEst = estimatePacketCost("sonnet", signal.complexity);
       tier = "sonnet";

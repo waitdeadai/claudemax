@@ -26,9 +26,22 @@ export type BillingMode = "subscription" | "api";
 
 export type ParallelMode = "auto" | "solo" | "teams";
 
+// Pre-split: today's reality (≤ 2026-06-14). `claude` REPL + `cmax ask` + every
+// query() call share the SAME 5-hour rolling pool + weekly cap. No separate
+// monthly Agent SDK credit exists yet.
+//
+// Post-split: 2026-06-15 onward. Anthropic announced (support.claude.com
+// article 15036540, code.claude.com/docs/en/agent-sdk/overview) that Agent SDK
+// calls move to a dedicated monthly credit pool billed at API list prices,
+// separate from the interactive subscription limits.
+export type BillingEra = "pre-split" | "post-split";
+
+export const BILLING_SPLIT_CUTOVER_ISO = "2026-06-15T00:00:00Z";
+
 export interface PlanInfo {
   readonly plan: Plan;
   readonly billing: BillingMode;
+  readonly era: BillingEra;
   readonly monthlyCreditUsd: number | null;
   readonly source: "auto-detect" | "env" | "config" | "default";
 }

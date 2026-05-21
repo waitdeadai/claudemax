@@ -15,9 +15,23 @@ export function doctorCommand(): Command {
       console.log(kleur.bold("billing"));
       console.log(`  plan:        ${planColor(info.plan)}`);
       console.log(`  billing:     ${info.billing}`);
-      console.log(`  credit:      ${info.monthlyCreditUsd != null ? `$${info.monthlyCreditUsd}/mo` : "(api — pay-per-token)"}`);
+      console.log(
+        `  era:         ${
+          info.era === "pre-split"
+            ? kleur.yellow("pre-split (today; cmax ask shares your subscription 5h rolling pool until 2026-06-15)")
+            : kleur.green("post-split (Agent SDK credit pool active)")
+        }`,
+      );
+      console.log(`  credit:      ${info.monthlyCreditUsd != null ? `$${info.monthlyCreditUsd}/mo${info.era === "pre-split" ? kleur.dim(" (forward-compat only)") : ""}` : "(api — pay-per-token)"}`);
       console.log(`  source:      ${info.source}`);
       console.log(kleur.dim(`  ${describePlan(info)}`));
+      if (info.era === "pre-split") {
+        console.log(
+          kleur.dim(
+            "  override era for dry-run: CMAX_BILLING_ERA=post-split  (or via: cmax config set billingEra post-split)",
+          ),
+        );
+      }
 
       let consumed = 0;
       try {

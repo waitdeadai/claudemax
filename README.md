@@ -241,17 +241,42 @@ Settings precedence per Anthropic docs (most → least authoritative): managed s
 
 The full threat model is in [`SECURITY.md`](./SECURITY.md). The bundled hooks help, but treat `bypassPermissions` like you'd treat running any other tool with `sudo`: useful, deliberate, and yours to revoke when context demands it.
 
-## Billing (verified 2026-05-20)
+## Billing (verified 2026-05-21)
 
-Anthropic split Claude subscription billing on **June 15, 2026** into two pools:
+Anthropic announced a billing split that takes effect **2026-06-15**. Today (before the cutover), all paid plans use a single shared pool. The harness is era-aware and auto-resolves which model to use based on the current date.
+
+### Today (pre-split era, until 2026-06-15)
 
 | Surface | Bills against |
 |---|---|
-| `claude` interactive | Subscription interactive pool (Claude.ai shared; 5h rolling window) |
-| `claude -p` / Agent SDK `query()` | **Separate monthly Agent SDK credit pool** ($100 Max5x / $200 Max20x) |
+| `claude` interactive REPL + claude.ai | Shared 5-hour rolling subscription pool + weekly cap |
+| `claude -p` / Agent SDK `query()` / `cmax ask` | **SAME shared subscription pool** — not a separate Agent SDK credit yet |
+| `@anthropic-ai/sdk` w/ API key | Pay-per-token (no subscription discount) |
+
+Source: [support.claude.com/en/articles/11145838](https://support.claude.com/en/articles/11145838) — "usage limits are shared across Claude and Claude Code, meaning all activity in both tools counts against the same usage limits." [code.claude.com/docs/en/agent-sdk/overview](https://code.claude.com/docs/en/agent-sdk/overview) — "Starting June 15, 2026, Agent SDK and `claude -p` usage on subscription plans will draw from a new monthly Agent SDK credit, separate from your interactive usage limits."
+
+**Operational impact today:** running `cmax ask` for a multi-hour goal WILL consume your interactive subscription envelope. The 70/90/95% cost-guard against `$100/$200 monthly Agent SDK credit` is currently **forward-compat only** — `budgetTag()` returns `ok` in pre-split era regardless of consumption. Auto-pace via the 5-hour rolling cap instead.
+
+### From 2026-06-15 onward (post-split era)
+
+| Surface | Bills against |
+|---|---|
+| `claude` interactive REPL + claude.ai | Shared subscription pool (unchanged) |
+| `claude -p` / Agent SDK `query()` / `cmax ask` | **Dedicated monthly Agent SDK credit** ($20 Pro / $100 Max5x / $200 Max20x), billed at API list prices, no rollover, per-account |
 | `@anthropic-ai/sdk` w/ API key | Pay-per-token |
 
-claudemax v0.2 routes 100% of provider calls through `query()` → bills against your Agent SDK credit. The spec writer was the last hold-out in v0.1; fixed.
+claudemax routes 100% of provider calls through `query()` so the post-split move is automatic on June 15 — no config change needed.
+
+### Era detection + override
+
+`cmax doctor` prints the resolved era (`pre-split` today, `post-split` after 2026-06-15). Override for dry-run testing:
+
+```bash
+export CMAX_BILLING_ERA=post-split   # exercise the post-split cost-guard path today
+export CMAX_BILLING_ERA=pre-split    # force pre-split behavior after June 15
+```
+
+claudemax v0.2 routes 100% of provider calls through `query()` → bills against the shared pool today, automatic switch to the Agent SDK credit pool on 2026-06-15. The spec writer was the last hold-out in v0.1; fixed.
 
 ## Dark-patterns hooks integrated
 

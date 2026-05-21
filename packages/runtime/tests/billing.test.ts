@@ -70,22 +70,38 @@ describe("detectPlan", () => {
 });
 
 describe("describePlan", () => {
-  it("subscription mode describes the credit allocation", () => {
+  it("subscription pre-split flags the era explicitly", () => {
     const txt = describePlan({
       plan: "max20x",
       billing: "subscription",
+      era: "pre-split",
       monthlyCreditUsd: 200,
       source: "env",
     });
     expect(txt).toContain("subscription");
-    expect(txt).toContain("$200");
     expect(txt).toContain("max20x");
+    expect(txt).toContain("pre-split");
+    expect(txt).toContain("2026-06-15");
+  });
+
+  it("subscription post-split surfaces the dedicated Agent SDK credit envelope", () => {
+    const txt = describePlan({
+      plan: "max20x",
+      billing: "subscription",
+      era: "post-split",
+      monthlyCreditUsd: 200,
+      source: "env",
+    });
+    expect(txt).toContain("post-split");
+    expect(txt).toContain("$200");
+    expect(txt).toContain("Agent SDK credit");
   });
 
   it("api mode names the API key auth path", () => {
     const txt = describePlan({
       plan: "api",
       billing: "api",
+      era: "pre-split",
       monthlyCreditUsd: null,
       source: "auto-detect",
     });

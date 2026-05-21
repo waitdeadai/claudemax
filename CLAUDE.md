@@ -8,7 +8,9 @@ You are working on **claudemax**, an Anthropic-native power-user harness. Spec-d
 
 ## Subscription-first auth
 
-All provider calls route through `query()` from `@anthropic-ai/claude-agent-sdk` → bills against Agent SDK credit. The bare `@anthropic-ai/sdk` (which would require `ANTHROPIC_API_KEY`) is **not a dependency**; don't reintroduce it. If you need structured output, use `outputFormat: { type: "json_schema", schema }` via `query()`.
+All provider calls route through `query()` from `@anthropic-ai/claude-agent-sdk`. The bare `@anthropic-ai/sdk` (which would require `ANTHROPIC_API_KEY`) is **not a dependency**; don't reintroduce it. If you need structured output, use `outputFormat: { type: "json_schema", schema }` via `query()`.
+
+**Billing era (today is 2026-05-21):** Anthropic's split between interactive pool and dedicated Agent SDK credit pool takes effect **2026-06-15**. Today's reality (pre-split era): `cmax ask` consumes the SAME shared 5-hour rolling subscription pool as `claude` REPL. The harness is era-aware — `resolveBillingEra()` in `packages/core/src/cost.ts` auto-resolves by date, override via `CMAX_BILLING_ERA=pre-split|post-split`. Cost-guard 70/90/95% thresholds against `$100/$200 monthly Agent SDK credit` are forward-compat only in pre-split era (`budgetTag` returns `ok` regardless of consumption). Sources: support.claude.com articles 11145838 + 15036540, code.claude.com/docs/en/agent-sdk/overview (accessed 2026-05-21).
 
 ## Repository shape
 

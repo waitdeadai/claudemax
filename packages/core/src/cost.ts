@@ -1,5 +1,17 @@
 import { MODELS } from "./models.js";
-import type { ModelTier, Plan } from "./types.js";
+import type { BillingEra, ModelTier, Plan } from "./types.js";
+import { BILLING_SPLIT_CUTOVER_ISO } from "./types.js";
+
+// Auto-resolve the billing era from the current date. Anthropic's announced
+// cutover is 2026-06-15 (support.claude.com article 15036540 +
+// code.claude.com/docs/en/agent-sdk/overview, accessed 2026-05-21). Before
+// that date: shared 5-hour rolling subscription pool. After: separate monthly
+// Agent SDK credit pool. Override via env CMAX_BILLING_ERA=pre-split|post-split.
+export function resolveBillingEra(now: Date = new Date()): BillingEra {
+  const override = process.env["CMAX_BILLING_ERA"];
+  if (override === "pre-split" || override === "post-split") return override;
+  return now.getTime() >= Date.parse(BILLING_SPLIT_CUTOVER_ISO) ? "post-split" : "pre-split";
+}
 
 export interface UsageEstimate {
   readonly inputTokens: number;
@@ -17,6 +29,12 @@ export interface CacheStats {
   readonly savedUsd: number;
 }
 
+// Per Anthropic's announcement (support.claude.com/en/articles/15036540,
+// accessed 2026-05-21): the monthly Agent SDK credit pool is $20/$100/$200
+// starting 2026-06-15. Before that date these values are nominal — the actual
+// envelope today is the shared 5-hour rolling pool + weekly cap. We keep the
+// dollar values for forward-compat (cost-guard math) and gate semantics in
+// formatPlanBudgetState() + budgetTag() on the resolved era.
 export const MONTHLY_CREDIT_USD: Readonly<Record<Plan, number | null>> = {
   max20x: 200,
   max5x: 100,
@@ -83,20 +101,34 @@ export function formatCost(usd: number, opts: FormatCostOptions = {}): string {
   return `${dollars}  •  ${pct}% of $${allocation} monthly credit`;
 }
 
-export function formatPlanBudgetState(plan: Plan, consumedUsd: number): string {
+export function formatPlanBudgetState(
+  plan: Plan,
+  consumedUsd: number,
+  era: BillingEra = resolveBillingEra(),
+): string {
   const allocation = MONTHLY_CREDIT_USD[plan];
   if (allocation == null) {
     return `api mode — pay-per-token, no monthly credit; consumed this period: $${consumedUsd.toFixed(2)}`;
   }
+  if (era === "pre-split") {
+    return `${plan} (pre-split era; until 2026-06-15) — claudemax shares your 5h rolling + weekly subscription pool; cost-guard against $${allocation}/mo is FORWARD-COMPAT only. Consumed this period: $${consumedUsd.toFixed(2)}`;
+  }
   const pct = (consumedUsd / allocation) * 100;
-  const tag =
-    pct >= 95 ? "blocked" : pct >= 90 ? "danger" : pct >= 70 ? "guard" : "ok";
-  return `${plan} — $${consumedUsd.toFixed(2)} / $${allocation} (${pct.toFixed(1)}%) [${tag}]`;
+  const tag = pct >= 95 ? "blocked" : pct >= 90 ? "danger" : pct >= 70 ? "guard" : "ok";
+  return `${plan} (post-split) — $${consumedUsd.toFixed(2)} / $${allocation} Agent SDK credit (${pct.toFixed(1)}%) [${tag}]`;
 }
 
 export type BudgetTag = "ok" | "guard" | "danger" | "blocked";
 
-export function budgetTag(plan: Plan, consumedUsd: number): BudgetTag {
+export function budgetTag(
+  plan: Plan,
+  consumedUsd: number,
+  era: BillingEra = resolveBillingEra(),
+): BudgetTag {
+  // Pre-split era: the monthly Agent SDK credit doesn't exist yet, so we never
+  // tag guard/danger/blocked against a fictional envelope. Caller can switch
+  // to era="post-split" via env CMAX_BILLING_ERA to dry-run the post-split path.
+  if (era === "pre-split") return "ok";
   const allocation = MONTHLY_CREDIT_USD[plan];
   if (allocation == null) return "ok";
   const pct = (consumedUsd / allocation) * 100;

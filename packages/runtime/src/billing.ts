@@ -1,12 +1,19 @@
 import { execSync } from "node:child_process";
-import { MONTHLY_CREDIT_USD, type Plan, type PlanInfo } from "@claudemax/core";
+import {
+  MONTHLY_CREDIT_USD,
+  resolveBillingEra,
+  type Plan,
+  type PlanInfo,
+} from "@claudemax/core";
 
 export function detectPlan(): PlanInfo {
+  const era = resolveBillingEra();
   const envPlan = process.env["CMAX_PLAN"] as Plan | undefined;
   if (envPlan && envPlan in MONTHLY_CREDIT_USD) {
     return {
       plan: envPlan,
       billing: envPlan === "api" ? "api" : "subscription",
+      era,
       monthlyCreditUsd: MONTHLY_CREDIT_USD[envPlan],
       source: "env",
     };
@@ -16,6 +23,7 @@ export function detectPlan(): PlanInfo {
     return {
       plan: "api",
       billing: "api",
+      era,
       monthlyCreditUsd: null,
       source: "auto-detect",
     };
@@ -27,6 +35,7 @@ export function detectPlan(): PlanInfo {
       return {
         plan: cliPlan,
         billing: "subscription",
+        era,
         monthlyCreditUsd: MONTHLY_CREDIT_USD[cliPlan],
         source: "auto-detect",
       };
@@ -36,6 +45,7 @@ export function detectPlan(): PlanInfo {
   return {
     plan: "max5x",
     billing: "subscription",
+    era,
     monthlyCreditUsd: MONTHLY_CREDIT_USD["max5x"],
     source: "default",
   };
@@ -62,5 +72,8 @@ export function describePlan(info: PlanInfo): string {
   if (info.billing === "api") {
     return `api (pay-per-token via ANTHROPIC_API_KEY) — source: ${info.source}`;
   }
-  return `subscription ${info.plan} — $${info.monthlyCreditUsd} Agent SDK credit/mo — source: ${info.source}`;
+  if (info.era === "pre-split") {
+    return `subscription ${info.plan} (era: pre-split, today's reality) — shared 5h rolling + weekly subscription pool until 2026-06-15; $${info.monthlyCreditUsd}/mo Agent SDK credit is the FORWARD-COMPAT envelope — source: ${info.source}`;
+  }
+  return `subscription ${info.plan} (era: post-split, 2026-06-15+) — $${info.monthlyCreditUsd} dedicated Agent SDK credit/mo — source: ${info.source}`;
 }

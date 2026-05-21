@@ -64,44 +64,63 @@ describe("cost — formatting", () => {
     expect(out).toContain("10.0%");
   });
 
-  it("formatPlanBudgetState includes a tag bracket", () => {
-    expect(formatPlanBudgetState("max20x", 50)).toContain("[ok]");
-    expect(formatPlanBudgetState("max20x", 145)).toContain("[guard]");
-    expect(formatPlanBudgetState("max20x", 185)).toContain("[danger]");
-    expect(formatPlanBudgetState("max20x", 195)).toContain("[blocked]");
+  it("formatPlanBudgetState post-split: includes a tag bracket", () => {
+    expect(formatPlanBudgetState("max20x", 50, "post-split")).toContain("[ok]");
+    expect(formatPlanBudgetState("max20x", 145, "post-split")).toContain("[guard]");
+    expect(formatPlanBudgetState("max20x", 185, "post-split")).toContain("[danger]");
+    expect(formatPlanBudgetState("max20x", 195, "post-split")).toContain("[blocked]");
+  });
+
+  it("formatPlanBudgetState pre-split: explicitly flags the era and the forward-compat status", () => {
+    const out = formatPlanBudgetState("max20x", 50, "pre-split");
+    expect(out).toContain("pre-split");
+    expect(out).toContain("2026-06-15");
+    expect(out).toContain("FORWARD-COMPAT");
+    expect(out).not.toContain("[ok]");
+    expect(out).not.toContain("[guard]");
   });
 });
 
-describe("budgetTag — Max plans use identical thresholds, different absolute numbers", () => {
+describe("budgetTag — pre-split era is always ok regardless of consumption", () => {
+  it("returns ok even at 95%+ because the credit envelope does not exist yet", () => {
+    expect(budgetTag("max5x", 99, "pre-split")).toBe("ok");
+    expect(budgetTag("max20x", 199, "pre-split")).toBe("ok");
+    expect(budgetTag("pro", 19.5, "pre-split")).toBe("ok");
+  });
+});
+
+describe("budgetTag — post-split: Max plans use identical thresholds, different absolute numbers", () => {
+  const POST = "post-split" as const;
+
   it("api mode is always ok", () => {
-    expect(budgetTag("api", 0)).toBe("ok");
-    expect(budgetTag("api", 9999)).toBe("ok");
+    expect(budgetTag("api", 0, POST)).toBe("ok");
+    expect(budgetTag("api", 9999, POST)).toBe("ok");
   });
 
   it("Max 20x: < $140 = ok, $140-180 = guard, $180-190 = danger, $190+ = blocked", () => {
-    expect(budgetTag("max20x", 100)).toBe("ok");
-    expect(budgetTag("max20x", 139.99)).toBe("ok");
-    expect(budgetTag("max20x", 140)).toBe("guard");
-    expect(budgetTag("max20x", 179.99)).toBe("guard");
-    expect(budgetTag("max20x", 180)).toBe("danger");
-    expect(budgetTag("max20x", 189.99)).toBe("danger");
-    expect(budgetTag("max20x", 190)).toBe("blocked");
+    expect(budgetTag("max20x", 100, POST)).toBe("ok");
+    expect(budgetTag("max20x", 139.99, POST)).toBe("ok");
+    expect(budgetTag("max20x", 140, POST)).toBe("guard");
+    expect(budgetTag("max20x", 179.99, POST)).toBe("guard");
+    expect(budgetTag("max20x", 180, POST)).toBe("danger");
+    expect(budgetTag("max20x", 189.99, POST)).toBe("danger");
+    expect(budgetTag("max20x", 190, POST)).toBe("blocked");
   });
 
   it("Max 5x: < $70 = ok, $70-90 = guard, $90-95 = danger, $95+ = blocked", () => {
-    expect(budgetTag("max5x", 50)).toBe("ok");
-    expect(budgetTag("max5x", 69.99)).toBe("ok");
-    expect(budgetTag("max5x", 70)).toBe("guard");
-    expect(budgetTag("max5x", 89.99)).toBe("guard");
-    expect(budgetTag("max5x", 90)).toBe("danger");
-    expect(budgetTag("max5x", 94.99)).toBe("danger");
-    expect(budgetTag("max5x", 95)).toBe("blocked");
+    expect(budgetTag("max5x", 50, POST)).toBe("ok");
+    expect(budgetTag("max5x", 69.99, POST)).toBe("ok");
+    expect(budgetTag("max5x", 70, POST)).toBe("guard");
+    expect(budgetTag("max5x", 89.99, POST)).toBe("guard");
+    expect(budgetTag("max5x", 90, POST)).toBe("danger");
+    expect(budgetTag("max5x", 94.99, POST)).toBe("danger");
+    expect(budgetTag("max5x", 95, POST)).toBe("blocked");
   });
 
   it("Pro: thresholds scale proportionally", () => {
-    expect(budgetTag("pro", 10)).toBe("ok");
-    expect(budgetTag("pro", 14)).toBe("guard");
-    expect(budgetTag("pro", 18)).toBe("danger");
-    expect(budgetTag("pro", 19.5)).toBe("blocked");
+    expect(budgetTag("pro", 10, POST)).toBe("ok");
+    expect(budgetTag("pro", 14, POST)).toBe("guard");
+    expect(budgetTag("pro", 18, POST)).toBe("danger");
+    expect(budgetTag("pro", 19.5, POST)).toBe("blocked");
   });
 });

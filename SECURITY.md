@@ -6,7 +6,12 @@ claudemax runs autonomous AI agents that read your filesystem, run shell command
 
 In April 2026 Anthropic [briefly blocked third-party agent frameworks](https://thenextweb.com/news/anthropic-openclaw-claude-subscription-ban-cost) (OpenClaw, claude-flow, others) from piping Pro/Max subscription limits through programmatic tools. The policy was [reversed](https://www.datagrom.com/ai-news/anthropic-reverses-ban-on-third-party-ai-agent-use-8ec3aaa6) when Anthropic introduced a separate **Agent SDK credit subcategory** on Pro/Max plans (Pro $20, Max5x $100, Max20x $200) specifically allocated for programmatic uses including external tools.
 
-**claudemax routes 100% of provider calls through `@anthropic-ai/claude-agent-sdk` `query()`**. Those calls bill against the Agent SDK credit pool, NOT the interactive usage limit. This is the compliant, supported path per the [June 15 2026 billing split docs](https://help.apiyi.com/en/anthropic-claude-subscription-agent-sdk-billing-split-june-2026-en.html). The `cmax doctor` command surfaces which billing path is active.
+**claudemax routes 100% of provider calls through `@anthropic-ai/claude-agent-sdk` `query()`**. The pool those calls draw from depends on the date:
+
+- **Today (pre-split era, until 2026-06-15):** `query()` calls share the SAME 5-hour rolling subscription pool as the interactive `claude` REPL — confirmed by [support.claude.com/en/articles/11145838](https://support.claude.com/en/articles/11145838) ("usage limits are shared across Claude and Claude Code"). The harness is era-aware and the cost-guard against the `$100/$200 monthly Agent SDK credit` is forward-compat only in this era.
+- **From 2026-06-15 onward (post-split era):** `query()` calls move to a dedicated monthly Agent SDK credit pool ($20/$100/$200, billed at API list prices) per [code.claude.com/docs/en/agent-sdk/overview](https://code.claude.com/docs/en/agent-sdk/overview) and [support.claude.com/en/articles/15036540](https://support.claude.com/en/articles/15036540). claudemax auto-switches by date; no config change needed.
+
+`cmax doctor` surfaces the resolved era and which billing path is active. Override for dry-run testing via `CMAX_BILLING_ERA=pre-split|post-split`.
 
 Users opt into the API-key billing path (`CMAX_PLAN=api` or `ANTHROPIC_API_KEY` set in env) explicitly. Default is subscription via Agent SDK credit.
 
