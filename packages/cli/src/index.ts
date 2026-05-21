@@ -18,6 +18,7 @@ import { bgCommand } from "./commands/bg.js";
 import { updateCommand } from "./commands/update.js";
 import { askCommand } from "./commands/ask.js";
 import { tddCommand } from "./commands/tdd.js";
+import { orchestrateCommand } from "./commands/orchestrate.js";
 
 const program = new Command();
 
@@ -27,6 +28,7 @@ program
   .version("0.2.0");
 
 program.addCommand(askCommand());
+program.addCommand(orchestrateCommand());
 program.addCommand(runCommand());
 program.addCommand(doctorCommand());
 program.addCommand(tasteCommand());

@@ -293,6 +293,7 @@ See `.claude/DARK_PATTERNS_INSTALL.md` for the full inventory and standalone ins
 
 ```bash
 cmax ask "<goal>"                          # canonical ask-and-achieve entry; same engine as `cmax run`
+cmax orchestrate "<goal A>" "<goal B>"     # N parallel cmax-ask pipelines for DIFFERENT goals; live status table + rollup verdict
 cmax run "<goal>"                          # full multispec pipeline (default umbrella)
 cmax run "<goal>" --variant opusolo        # all-Opus mode
 cmax run "<goal>" --mode teams             # force Agent Teams (Mode B) parallelism

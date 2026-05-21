@@ -31,13 +31,14 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/spec` | Author a single SPEC.md with measurable completion conditions |
 | `/specqa` | Spec quality gate — every verifyHint must be mechanically checkable |
 
-### Execution (5)
+### Execution (6)
 
 | Skill | Purpose |
 |---|---|
 | `/goal` | Autonomous /goal loop wrapping Claude Code's native validator-loop |
 | `/tdd` | Strict write-failing-test-first → implement → verify-passes cycle. Opt-in via `cmax ask "<goal>" --tdd` |
-| `/parallel` | Distinct-packet fan-out (DispatchPlan) |
+| `/orchestrate` | Multi-goal harness — N parallel `cmax ask` pipelines for DIFFERENT goals; live status table + rollup verdict |
+| `/parallel` | Distinct-packet fan-out (DispatchPlan) for ONE goal |
 | `/hive` | Same problem N times → merge proposals |
 | `/council` | 3-Opus adversarial debate (proposer / critic / judge) |
 
@@ -73,7 +74,7 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/agentteams` | Manual invocation of Mode B (Claude Code Agent Teams) |
 | `/harness-audit` | Periodic review of claudemax's own scaffolding against current Opus capability |
 
-## Total: 29 active skills (5 umbrellas + 5 research + 2 planning + 5 execution + 3 verification + 3 memory + 2 taste + 4 infrastructure = 29). Two of the 5 umbrellas (`/workflow`, `/opussonnet`) are explicit ALIAS-for-/cmax entries kept only for v1 muscle memory. One additional directory (`/dispatch`) ships as a DEPRECATED stub — router should skip; use `/parallel` or the CLI `cmax dispatch` instead.
+## Total: 30 active skills (5 umbrellas + 5 research + 2 planning + 6 execution + 3 verification + 3 memory + 2 taste + 4 infrastructure = 30). Two of the 5 umbrellas (`/workflow`, `/opussonnet`) are explicit ALIAS-for-/cmax entries kept only for v1 muscle memory. One additional directory (`/dispatch`) ships as a DEPRECATED stub — router should skip; use `/parallel` or the CLI `cmax dispatch` instead.
 
 Lean, audited for overlap. Cuts vs v1's 43-skill catalog: MiniMax-specific skills dropped entirely; /webresearch merged into /deepresearch; /autoplan into the multispec engine; /qa into /verify; /digestaste + /digestflow are internal runtime functions; /tastebootstrap replaced by auto-bootstrap /taste; product-specific skills (/defineicp /icpweek /claudeproduct etc.) deferred.
 

@@ -198,7 +198,7 @@ export function initCommand(): Command {
 
       console.log(
         kleur.dim(
-          "\n  Slash commands available: /ask /cmax /workflow /opussonnet /opusolo /spec /goal /tdd /verify /deepresearch /audit /investigate /codesearch /introspect /specqa /parallel /hive /council /review /ship /align /overnight /taste /deepretaste /agentfactory /agentteams /route /memory /harness-audit",
+          "\n  Slash commands available: /ask /cmax /workflow /opussonnet /opusolo /spec /goal /tdd /orchestrate /verify /deepresearch /audit /investigate /codesearch /introspect /specqa /parallel /hive /council /review /ship /align /overnight /taste /deepretaste /agentfactory /agentteams /route /memory /harness-audit",
         ),
       );
       if (Object.keys(dpHooks).length > 0) {
