@@ -150,12 +150,46 @@ head "user-level skill install (run \`claude\` from anywhere → /cmax, /ask, /t
 if [ "$NO_USER_INIT" = true ]; then
   warn "skipped (--no-user-init). Run later with: cmax init --target ~ --force"
 elif [ -d "$HOME/.claude/skills/cmax" ]; then
-  ok "user-level skills already present at ~/.claude/skills/cmax"
+  ok "user-level claudemax skills already present at ~/.claude/skills/cmax"
   warn "refresh anytime with: cmax init --target ~ --force"
 else
-  "$BIN_SRC" init --target "$HOME" 2>&1 | sed 's/^/  /' || warn "user-level init returned non-zero; you can retry: cmax init --target ~ --force"
+  # Auto-backup case: ~/.claude/skills/ exists but doesn't contain cmax — likely a prior
+  # minmaxing v1 install or unrelated user-level skills. cmax init refuses to overwrite a
+  # non-empty skills dir, so move it aside first (non-destructive — data preserved).
+  if [ -d "$HOME/.claude/skills" ]; then
+    BACKUP_DIR="$HOME/.claude/skills.pre-claudemax-backup-$(date +%Y%m%d-%H%M%S)"
+    mv "$HOME/.claude/skills" "$BACKUP_DIR"
+    warn "found pre-existing ~/.claude/skills/ (likely minmaxing v1 or unrelated user skills)"
+    ok "backed up to $BACKUP_DIR  (restore by mv-ing back; nothing was deleted)"
+  fi
+  "$BIN_SRC" init --target "$HOME" 2>&1 | sed 's/^/  /' || warn "user-level init returned non-zero; retry: cmax init --target ~ --force"
   if [ -d "$HOME/.claude/skills/cmax" ]; then
-    ok "wrote ~/.claude/skills/ (slash commands now available in EVERY claude session, not just project-init'd ones)"
+    ok "wrote ~/.claude/skills/ (slash commands now available in EVERY claude session)"
+  fi
+fi
+
+# --- ensure ~/.local/bin is on PATH ------------------------------------------
+# Idempotent via the same marker pattern as the bash alias block.
+if [ "$GLOBAL_LINK" = false ]; then
+  PATH_MARKER="# claudemax: ensure ~/.local/bin on PATH"
+  PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+  PATH_RC=""
+  case "${SHELL:-}" in
+    */zsh) PATH_RC="$HOME/.zshrc" ;;
+    */bash) PATH_RC="$HOME/.bashrc" ;;
+  esac
+  if [ -n "$PATH_RC" ]; then
+    case ":$PATH:" in
+      *":$HOME/.local/bin:"*) : ;;  # already on PATH in this shell
+      *)
+        if ! grep -qF "$PATH_MARKER" "$PATH_RC" 2>/dev/null; then
+          {
+            printf "\n%s\n%s\n" "$PATH_MARKER" "$PATH_LINE"
+          } >> "$PATH_RC"
+          ok "appended PATH export to $PATH_RC (new shells will pick it up)"
+        fi
+        ;;
+    esac
   fi
 fi
 
@@ -174,7 +208,7 @@ Power-user defaults baked in:
   - plan/judge/verify   Opus 4.7               (never demoted)
   - sub-Spec exec       Sonnet 4.6             (router can escalate to Opus per task)
 
-Skills installed:    $INSTALL_DIR/skills/   (28 skills, lean catalog)
+Skills installed:    $INSTALL_DIR/skills/   (29 active skills + 1 deprecated stub, lean catalog)
 Docs:                $INSTALL_DIR/docs/QUICKSTART.md
 
 For the remote-from-phone flow (Tailscale + tmux + ntfy + QR onboarding), run setup.sh instead.
