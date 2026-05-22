@@ -39,6 +39,7 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/tdd` | Strict write-failing-test-first → implement → verify-passes cycle. Opt-in via `cmax ask "<goal>" --tdd` |
 | `/mega` | Session-limit-aware mega-build — N goals, auto-sized lanes from hardware × plan × free RAM, pauses on rate-limit saturation, resumable via `/resume`. Flagship for power users with many goals to ship. |
 | `/resume` | Pick up a paused `/mega` run. cron-friendly (exits 0 on no-op). Wire into systemd timer for fully-unattended resume across rate-limit windows. |
+| `/schedule` | SOTA-2026 reset-aware systemd-user-timer scheduler for `cmax` commands. Auto-discovers nvm/cargo PATH, dry-fires the target command BEFORE arming (catches missing-binary failures pre-flight), parses Anthropic rate-limit reset signals (RFC3339 + human "resets 3pm"), and auto-reschedules on session-limit hit. Subcommands: `run / list / status / cancel / test / parse-reset / path`. Built after the 2026-05-21 overnight cron lost a night to PATH+calendar bugs that this command exists to make impossible. |
 | `/orchestrate` | Multi-goal harness — N parallel `cmax ask` pipelines for DIFFERENT goals; live status table + rollup verdict. No auto-sizing (use /mega for that). |
 | `/parallel` | Distinct-packet fan-out (DispatchPlan) for ONE goal |
 | `/hive` | Same problem N times → merge proposals |

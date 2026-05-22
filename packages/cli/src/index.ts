@@ -21,6 +21,7 @@ import { tddCommand } from "./commands/tdd.js";
 import { orchestrateCommand } from "./commands/orchestrate.js";
 import { megaCommand } from "./commands/mega.js";
 import { resumeCommand } from "./commands/resume.js";
+import { scheduleCommand } from "./commands/schedule.js";
 
 const program = new Command();
 
@@ -33,6 +34,7 @@ program.addCommand(askCommand());
 program.addCommand(orchestrateCommand());
 program.addCommand(megaCommand());
 program.addCommand(resumeCommand());
+program.addCommand(scheduleCommand());
 program.addCommand(runCommand());
 program.addCommand(doctorCommand());
 program.addCommand(tasteCommand());

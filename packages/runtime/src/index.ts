@@ -21,3 +21,4 @@ export * from "./hardware.js";
 export * from "./saturation.js";
 export * from "./resumable.js";
 export * from "./features-list.js";
+export * from "./scheduler.js";
