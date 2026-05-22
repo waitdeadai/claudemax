@@ -36,6 +36,8 @@ Monorepo with pnpm workspaces:
 8. **Workers return evidence.** Every packet emits `EVIDENCE:` + `STATUS:` blocks. Dark-patterns hooks block fake aggregator claims.
 9. **No comments explaining what.** Code says what. Comments only for non-obvious why.
 10. **Plan-aware cost-guard.** 70% → guard (demote non-essential Opus). 90% → danger (aggressive demote). 95% → blocked (`--force` required).
+11. **Closeout shape** — when a turn ends partial / blocked / runtime-pending, OPEN the final message with `**Status: partial — <one-line reason>**` (or `Status: blocked` / `Status: runtime-pending` / `Status: paused` / `Status: in-progress` / `Status: unverified`). The `no-vibes.sh` hook recognizes this header in the first 800 chars as a self-declared honest closeout and skips the body scan. Without the header, positive verbs ("done", "ready", "passed", "shipped") anywhere in the message can trigger a block when paired with any failure-shaped phrase. The hook's repair guidance is canonical: `Status: ... / Verification: ... / Next step: ...`. `Status: complete` is INTENTIONALLY not in the allow list — completion claims still need evidence (commands run, tests passed).
+12. **`agentcloseout-physics` is the SOTA scorer for closeout hooks.** 19 of 31 dark-pattern hooks delegate to it for ~1ms deterministic scoring (replaces the regex fallback). `setup.sh` installs it via tiered fallback: cargo-binstall → cargo install from git → local clone+build. If missing, hooks still work via bash regex but trigger more false positives.
 
 ## Commands
 

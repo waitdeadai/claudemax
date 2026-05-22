@@ -204,6 +204,75 @@ else
   fi
 fi
 
+head "install agentcloseout-physics (deterministic closeout scorer)"
+# Replaces the bash-regex fallback in 19 dark-pattern hooks (honest-eta,
+# no-aggregator-hallucination, no-ai-tells, no-fake-cite, no-fake-recall,
+# no-prompt-restate, no-curfew, no-tldr-bait, no-cherry-pick-rollup,
+# no-sandbagging-disguise, no-fake-stats, no-meta-commentary,
+# no-phantom-tool-call, no-credential-leak-in-handoff, no-roleplay-drift,
+# no-rollback-claim-without-evidence, no-emoji-spam, no-silent-worker-success,
+# no-disclaimer-spam) with a Rust scorer that runs in ~1ms and uses the
+# YAML rule pack at agent-closeout-bench/rules/closeout/.
+#
+# Tiered installer per SOTA-2026 Rust binary distribution patterns (cargo-
+# binstall first for speed, fall back to cargo install from git, fall back
+# to local clone + build, fall back to warn-and-skip with bash-regex still
+# working). Sources accessed 2026-05-21:
+#   - github.com/cargo-bins/cargo-binstall — drop-in cargo install, ~100x faster
+#   - rust-cli.github.io/book/tutorial/packaging.html — cross-platform release
+#
+if command -v agentcloseout-physics >/dev/null 2>&1; then
+  ok "agentcloseout-physics already on PATH ($(command -v agentcloseout-physics))"
+else
+  INSTALLED_PHYSICS=false
+  # Tier 1: cargo-binstall — fastest if upstream publishes prebuilt releases.
+  if command -v cargo-binstall >/dev/null 2>&1; then
+    if cargo binstall --no-confirm agentcloseout-physics 2>/dev/null; then
+      ok "installed agentcloseout-physics via cargo binstall"
+      INSTALLED_PHYSICS=true
+    fi
+  fi
+  # Tier 2: clone + cargo build --release + symlink to ~/.local/bin.
+  if [ "$INSTALLED_PHYSICS" = false ] && command -v cargo >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
+    PHYSICS_DIR="${HOME}/.local/share/agent-closeout-bench"
+    if [ ! -d "$PHYSICS_DIR/.git" ]; then
+      mkdir -p "$(dirname "$PHYSICS_DIR")"
+      git clone --depth 1 https://github.com/waitdeadai/agent-closeout-bench.git "$PHYSICS_DIR" 2>/dev/null || true
+    else
+      git -C "$PHYSICS_DIR" pull --ff-only --quiet 2>/dev/null || true
+    fi
+    if [ -f "$PHYSICS_DIR/engine/Cargo.toml" ]; then
+      if (cd "$PHYSICS_DIR/engine" && cargo build --release --quiet 2>/dev/null); then
+        mkdir -p "${HOME}/.local/bin"
+        ln -sf "$PHYSICS_DIR/engine/target/release/agentcloseout-physics" "${HOME}/.local/bin/agentcloseout-physics"
+        ok "built + symlinked agentcloseout-physics → ${HOME}/.local/bin/"
+        INSTALLED_PHYSICS=true
+      fi
+    fi
+  fi
+  if [ "$INSTALLED_PHYSICS" = false ]; then
+    warn "agentcloseout-physics not installed (no cargo / no network / build failed)."
+    warn "  19 dark-pattern hooks will use bash-regex fallback. Functional but coarser."
+    warn "  To install later: cargo install --git https://github.com/waitdeadai/agent-closeout-bench --bin agentcloseout-physics"
+  fi
+fi
+
+head "sync dark-patterns hooks to Claude Code plugin cache (if present)"
+# Claude Code's plugin marketplace caches a separate copy at
+# ~/.claude/plugins/cache/waitdeadai-plugins/llm-dark-patterns/<ver>/hooks/.
+# When the marketplace plugin lags behind upstream, those copies override
+# our vendor patches. Sync upstream → cache so the latest upstream hooks
+# win even before the plugin tarball updates.
+if [ "$SKIP_DARK_PATTERNS" != true ] && [ -d "$INSTALL_DIR/vendor/llm-dark-patterns/hooks" ]; then
+  for plugin_cache_hooks in \
+    "$HOME/.claude/hooks/dark-patterns/hooks" \
+    "$HOME/.claude/plugins/cache/waitdeadai-plugins/llm-dark-patterns"/*/hooks; do
+    [ -d "$plugin_cache_hooks" ] || continue
+    cp -f "$INSTALL_DIR/vendor/llm-dark-patterns/hooks"/*.sh "$plugin_cache_hooks/" 2>/dev/null || true
+    ok "synced upstream hooks → $plugin_cache_hooks"
+  done
+fi
+
 # ---- 5. Symlink ------------------------------------------------------------
 
 head "symlink"
