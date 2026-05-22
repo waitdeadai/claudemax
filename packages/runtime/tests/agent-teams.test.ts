@@ -5,7 +5,14 @@ import type { MultiSpec, Spec } from "@claudemax/core";
 const makeSpec = (title: string): Spec => ({
   title,
   goal: `Goal for ${title}`,
-  completionConditions: [{ id: `${title}-cc-1`, description: `cc for ${title}` }],
+  nonGoals: [],
+  constraints: [],
+  completionConditions: [
+    { id: `${title}-cc-1`, description: `cc for ${title}`, verifyHint: "echo ok" },
+  ],
+  assumptions: [],
+  evidenceRequired: [],
+  createdAt: new Date().toISOString(),
 });
 
 const PACKET_MS = 400;

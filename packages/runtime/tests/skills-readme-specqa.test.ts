@@ -17,7 +17,7 @@ describe("skills/README.md /specqa completion conditions (SPEC verify hints)", (
 
   it("[cc-readme-planning-row] /specqa is a row in the Planning table", () => {
     const r = bash(
-      `awk '/^##.*[Pp]lanning/{flag=1;next} /^## /{flag=0} flag' ${readme} | grep -E '^\\|\\s*/?specqa'`
+      `awk '/^#+[ \\t]+[Pp]lanning/{flag=1;next} /^#+[ \\t]+/{flag=0} flag' ${readme} | grep -E '^\\|[ \\t]*\`?/?specqa'`
     );
     expect(r.status).toBe(0);
   });
@@ -25,7 +25,7 @@ describe("skills/README.md /specqa completion conditions (SPEC verify hints)", (
   it("[cc-readme-planning-count-matches] Planning header count equals row count", () => {
     const r = bash(
       `header=$(grep -oE "Planning \\(([0-9]+)\\)" ${readme} | head -1 | grep -oE "[0-9]+"); ` +
-        `rows=$(awk "/^## .*Planning/{flag=1;next} /^## /{flag=0} flag" ${readme} | grep -cE "^\\|\\s*/"); ` +
+        `rows=$(awk "/^#+[ \\t]+[Pp]lanning/{flag=1;next} /^#+[ \\t]+/{flag=0} flag" ${readme} | grep -cE "^\\|[ \\t]*\\\`?/"); ` +
         `test "$header" = "$rows"`
     );
     expect(r.status).toBe(0);
