@@ -1,6 +1,6 @@
 {
   "name": "claudemax",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "private": true,
   "description": "Anthropic-native power-user harness for effective completion of software work. Spec-driven, model-routed, max-parallel, validated-loop autonomy, independently verified. Tuned for Claude Max subscribers.",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "claudemax",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Anthropic-native power-user harness for Claude Max subscribers. Multispec engine + parallel /goal + blind /verify on Opus 4.7. 29-skill catalog, bundled llm-dark-patterns hooks, two parallelism modes (SDK subagents + Claude Code Agent Teams).",
   "author": {
     "name": "waitdeadai",
