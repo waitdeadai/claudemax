@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateVerdict,
+  buildGoalRunArgs,
   mapExitCodeToStatus,
   planGoals,
   slugifyGoal,
@@ -71,6 +72,40 @@ describe("aggregateVerdict", () => {
   it("mix of finished + non-finished → partial", () => {
     expect(aggregateVerdict([rec("finished"), rec("partial")])).toBe("partial");
     expect(aggregateVerdict([rec("finished"), rec("failed")])).toBe("partial");
+  });
+});
+
+describe("buildGoalRunArgs — SPEC.md write-race fix", () => {
+  it("gives each goal its own --out path under the orchestrator state dir", () => {
+    const a = buildGoalRunArgs({ id: "goal-a", goal: "do a", cwd: "/tmp" }, {}, "/tmp/state");
+    const b = buildGoalRunArgs({ id: "goal-b", goal: "do b", cwd: "/tmp" }, {}, "/tmp/state");
+    expect(a[a.indexOf("--out") + 1]).toBe("/tmp/state/goal-a.SPEC.md");
+    expect(b[b.indexOf("--out") + 1]).toBe("/tmp/state/goal-b.SPEC.md");
+    expect(a[a.indexOf("--out") + 1]).not.toBe(b[b.indexOf("--out") + 1]);
+  });
+
+  it("--out path is distinct from --memory path for the same goal", () => {
+    const a = buildGoalRunArgs({ id: "goal-a", goal: "do a", cwd: "/tmp" }, {}, "/tmp/state");
+    const outPath = a[a.indexOf("--out") + 1];
+    const memPath = a[a.indexOf("--memory") + 1];
+    expect(outPath).not.toBe(memPath);
+    expect(outPath?.endsWith(".SPEC.md")).toBe(true);
+    expect(memPath?.endsWith(".memory.sqlite")).toBe(true);
+  });
+
+  it("propagates --tdd / --confidence / --variant / --mode when set", () => {
+    const args = buildGoalRunArgs(
+      { id: "g", goal: "x", cwd: "/tmp" },
+      { tdd: true, confidence: 0.85, variant: "opusolo", mode: "solo" },
+      "/tmp/state",
+    );
+    expect(args).toContain("--tdd");
+    expect(args).toContain("--confidence");
+    expect(args[args.indexOf("--confidence") + 1]).toBe("0.85");
+    expect(args).toContain("--variant");
+    expect(args[args.indexOf("--variant") + 1]).toBe("opusolo");
+    expect(args).toContain("--mode");
+    expect(args[args.indexOf("--mode") + 1]).toBe("solo");
   });
 });
 

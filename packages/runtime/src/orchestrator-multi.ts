@@ -73,6 +73,21 @@ export function planGoals(rawGoals: readonly string[], cwd: string): readonly Go
   return out;
 }
 
+export function buildGoalRunArgs(
+  g: GoalSpec,
+  opts: Pick<MultiOrchestratorOptions, "tdd" | "confidence" | "variant" | "mode">,
+  stateDir: string,
+): string[] {
+  const args = ["run", g.goal];
+  if (opts.tdd) args.push("--tdd");
+  if (opts.confidence != null) args.push("--confidence", String(opts.confidence));
+  if (opts.variant) args.push("--variant", opts.variant);
+  if (opts.mode) args.push("--mode", opts.mode);
+  args.push("--memory", join(stateDir, `${g.id}.memory.sqlite`));
+  args.push("--out", join(stateDir, `${g.id}.SPEC.md`));
+  return args;
+}
+
 export function aggregateVerdict(records: readonly GoalRunRecord[]): MultiOrchestratorResult["verdict"] {
   if (records.length === 0) return "all-failed";
   const finished = records.filter((r) => r.status === "finished").length;
@@ -130,14 +145,7 @@ export async function runMultiOrchestrator(
     new Promise<void>((resolveP) => {
       const recordCwd = g.cwd ?? cwd;
       records.set(g.id, { ...records.get(g.id)!, status: "running", startedAt: Date.now() });
-      const args = ["run", g.goal];
-      if (opts.tdd) args.push("--tdd");
-      if (opts.confidence != null) args.push("--confidence", String(opts.confidence));
-      if (opts.variant) args.push("--variant", opts.variant);
-      if (opts.mode) args.push("--mode", opts.mode);
-
-      const memoryPath = join(stateDir, `${g.id}.memory.sqlite`);
-      args.push("--memory", memoryPath);
+      const args = buildGoalRunArgs(g, opts, stateDir);
 
       const env = { ...process.env, ...(opts.env ?? {}) };
       const child = spawn("node", [CLI_BIN, ...args], {
