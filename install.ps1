@@ -189,30 +189,34 @@ Skills installed:    $InstallDir\skills\   (29 active skills, lean catalog)
 Docs:                $InstallDir\docs\QUICKSTART.md
 "@ | Write-Host
 
-# --- PowerShell function for bare claude REPL bypass --------------------------
-# Per code.claude.com/docs/en/permission-modes, the bare `claude` REPL gates
-# bypassPermissions behind a launch flag. settings.json alone is not enough.
-# This appends a PowerShell function to $PROFILE so typing `claude` from now on
-# always passes --dangerously-skip-permissions. Idempotent via the marker line.
-Head "PowerShell function for bare 'claude' REPL"
+# --- shell alias guidance for bare 'claude' REPL ------------------------------
+# Per code.claude.com/docs/en/permission-modes (and plugin.json _schemaNote),
+# the bare `claude` REPL gates bypassPermissions behind a launch flag —
+# settings.json alone is not enough. We PRINT the recommended PowerShell
+# function and the exact append command for $PROFILE, but we do NOT auto-modify
+# $PROFILE (the user copy-pastes if they want it). Skip the print with -NoAlias.
+Head "shell alias guidance for bare 'claude' REPL (--dangerously-skip-permissions)"
 if ($NoAlias.IsPresent) {
-  Warn "skipped (-NoAlias). Add manually: function claude { & claude.cmd --dangerously-skip-permissions @args }"
+  Warn "skipped (-NoAlias). For reference: function claude { & claude.cmd --dangerously-skip-permissions @args }"
 } else {
-  $profilePath = $PROFILE
-  $profileDir = Split-Path $profilePath
-  if (-not (Test-Path $profileDir)) {
-    New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
-  }
-  if (-not (Test-Path $profilePath)) {
-    New-Item -ItemType File -Force -Path $profilePath | Out-Null
-  }
-  $marker = "# claudemax: bypass-permissions function for bare claude REPL"
-  $existing = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
-  if ($existing -and $existing.Contains($marker)) {
-    Ok "function already present in $profilePath"
-  } else {
-    Add-Content -Path $profilePath -Value "`n$marker`nfunction claude { & claude.cmd --dangerously-skip-permissions @args }"
-    Ok "appended bypass function to $profilePath"
-    Warn "open a new PowerShell OR run: . `$PROFILE   (then 'claude' starts in bypass)"
-  }
+  $aliasFn = "function claude { & claude.cmd --dangerously-skip-permissions @args }"
+  $appendCmd = "Add-Content -Path `$PROFILE -Value '$aliasFn'"
+  $reloadCmd = ". `$PROFILE"
+  Write-Host @"
+  Recommended PowerShell function (per code.claude.com/docs/en/permission-modes):
+
+    $aliasFn
+
+  To add it to `$PROFILE ($PROFILE), run:
+
+    $appendCmd
+
+  Then open a new PowerShell (or '$reloadCmd') so 'claude' starts in bypass.
+
+  Why this is needed: bypassPermissions in settings.json is necessary-but-not-
+  sufficient — Anthropic gates bypass mode behind a launch flag, so the bare
+  'claude' REPL also needs --dangerously-skip-permissions on the CLI. We print
+  this guidance rather than auto-modifying `$PROFILE. See plugin.json
+  _schemaNote for the full citation.
+"@
 }

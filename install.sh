@@ -214,36 +214,54 @@ Docs:                $INSTALL_DIR/docs/QUICKSTART.md
 For the remote-from-phone flow (Tailscale + tmux + ntfy + QR onboarding), run setup.sh instead.
 EOF
 
-# --- shell alias for bare claude REPL bypass ----------------------------------
-# Per code.claude.com/docs/en/permission-modes, the bare `claude` REPL gates
-# bypassPermissions behind a launch flag. settings.json alone is not enough.
-# This appends an alias to the user's shell rc so typing `claude` from now on
-# starts in bypass mode. Idempotent via the marker line. Skip with --no-alias.
-head "shell alias for bare \`claude\` REPL"
+# --- shell alias guidance for bare `claude` REPL ------------------------------
+# Per code.claude.com/docs/en/permission-modes (and plugin.json _schemaNote),
+# the bare `claude` REPL gates bypassPermissions behind a launch flag —
+# settings.json alone is not enough. We PRINT the recommended alias and the
+# exact append command for the detected shell, but we do NOT auto-modify the
+# rc file (the user copy-pastes if they want it). Skip the print with --no-alias.
+head "shell alias guidance for bare \`claude\` REPL (--dangerously-skip-permissions)"
 if [ "$NO_ALIAS" = true ]; then
-  warn "skipped (--no-alias). Add manually: alias claude='claude --dangerously-skip-permissions'"
+  warn "skipped (--no-alias). For reference: alias claude='claude --dangerously-skip-permissions'"
 else
-  ALIAS_MARKER="# claudemax: bypass-permissions alias for bare claude REPL"
   ALIAS_LINE="alias claude='claude --dangerously-skip-permissions'"
-  SHELL_RC=""
   case "${SHELL:-}" in
-    */zsh) SHELL_RC="$HOME/.zshrc" ;;
-    */bash) SHELL_RC="$HOME/.bashrc" ;;
+    */zsh)
+      RC_FILE="$HOME/.zshrc"
+      APPEND_CMD="echo \"$ALIAS_LINE\" >> \"$RC_FILE\""
+      RELOAD_CMD="source $RC_FILE"
+      ;;
+    */bash)
+      RC_FILE="$HOME/.bashrc"
+      APPEND_CMD="echo \"$ALIAS_LINE\" >> \"$RC_FILE\""
+      RELOAD_CMD="source $RC_FILE"
+      ;;
+    */fish)
+      RC_FILE="$HOME/.config/fish/config.fish"
+      APPEND_CMD="echo \"alias claude 'claude --dangerously-skip-permissions'\" >> \"$RC_FILE\""
+      RELOAD_CMD="source $RC_FILE"
+      ;;
     *)
-      warn "shell \"${SHELL:-unknown}\" is not bash/zsh; add manually: $ALIAS_LINE"
-      SHELL_RC=""
+      RC_FILE="<your shell's rc file>"
+      APPEND_CMD="# SHELL=\"${SHELL:-unknown}\" not recognized; add to your shell rc manually:  $ALIAS_LINE"
+      RELOAD_CMD="<re-source your shell rc>"
       ;;
   esac
-  if [ -n "$SHELL_RC" ]; then
-    [ -f "$SHELL_RC" ] || touch "$SHELL_RC"
-    if grep -qF "$ALIAS_MARKER" "$SHELL_RC" 2>/dev/null; then
-      ok "alias already present in $SHELL_RC"
-    else
-      {
-        printf "\n%s\n%s\n" "$ALIAS_MARKER" "$ALIAS_LINE"
-      } >> "$SHELL_RC"
-      ok "appended bypass alias to $SHELL_RC"
-      warn "open a new shell OR run: source $SHELL_RC   (then \`claude\` starts in bypass)"
-    fi
-  fi
+  cat <<EOF
+  Recommended alias (per code.claude.com/docs/en/permission-modes):
+
+    $ALIAS_LINE
+
+  To add it to $RC_FILE, run:
+
+    $APPEND_CMD
+
+  Then open a new shell (or \`$RELOAD_CMD\`) so \`claude\` starts in bypass.
+
+  Why this is needed: bypassPermissions in settings.json is necessary-but-not-
+  sufficient — Anthropic gates bypass mode behind a launch flag, so the bare
+  \`claude\` REPL also needs --dangerously-skip-permissions on the CLI. We
+  print this guidance rather than auto-modifying your rc file. See plugin.json
+  _schemaNote for the full citation.
+EOF
 fi
