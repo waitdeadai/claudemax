@@ -30,6 +30,11 @@ export interface BaseQueryOptions {
   readonly agentId?: string;
   readonly parentAgentId?: string;
   readonly serviceVersion?: string;
+  // Path the SDK's file-based Memory tool (beta with Sonnet 4.5, 2025-09-29)
+  // reads/writes into. Per agent — keep per-lane isolation by passing
+  // .claudemax/agent-memory/<agent-id>/ here. SDK types are stale on this
+  // option; baseSdkOptions casts via `as never` at the query() boundary.
+  readonly memoryPath?: string;
 }
 
 // OTEL conventions per https://opentelemetry.io/docs/specs/semconv/
@@ -94,6 +99,13 @@ export function baseSdkOptions(o: BaseQueryOptions = {}): Record<string, unknown
   if (o.taskBudgetTokens !== undefined) {
     out["betas"] = [TASK_BUDGET_BETA];
     out["taskBudget"] = { total: o.taskBudgetTokens };
+  }
+  if (o.memoryPath) {
+    // Wire Anthropic's file-based Memory tool. The SDK option key is stable
+    // ("memory": { type: "file", path }) per the 2025-09-29 context
+    // engineering post, but the TS types haven't caught up — downstream
+    // call-sites pass this options block through `as never`.
+    out["memory"] = { type: "file", path: o.memoryPath };
   }
   if (o.abortSignal) {
     const ac = new AbortController();

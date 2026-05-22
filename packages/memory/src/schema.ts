@@ -5,7 +5,13 @@ CREATE TABLE IF NOT EXISTS episodes (
   kind TEXT NOT NULL,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
-  meta_json TEXT
+  meta_json TEXT,
+  run_id TEXT,
+  lane_id TEXT,
+  user_id TEXT,
+  app_id TEXT,
+  last_verified_at TEXT,
+  verified_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS decisions (
@@ -14,7 +20,13 @@ CREATE TABLE IF NOT EXISTS decisions (
   topic TEXT NOT NULL,
   decision TEXT NOT NULL,
   rationale TEXT NOT NULL,
-  superseded_by INTEGER REFERENCES decisions(id)
+  superseded_by INTEGER REFERENCES decisions(id),
+  run_id TEXT,
+  lane_id TEXT,
+  user_id TEXT,
+  app_id TEXT,
+  last_verified_at TEXT,
+  verified_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS errors_solutions (
@@ -23,7 +35,13 @@ CREATE TABLE IF NOT EXISTS errors_solutions (
   signature TEXT NOT NULL,
   error TEXT NOT NULL,
   solution TEXT NOT NULL,
-  context TEXT
+  context TEXT,
+  run_id TEXT,
+  lane_id TEXT,
+  user_id TEXT,
+  app_id TEXT,
+  last_verified_at TEXT,
+  verified_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS patterns (
@@ -31,7 +49,13 @@ CREATE TABLE IF NOT EXISTS patterns (
   ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   name TEXT NOT NULL,
   body TEXT NOT NULL,
-  uses INTEGER NOT NULL DEFAULT 0
+  uses INTEGER NOT NULL DEFAULT 0,
+  run_id TEXT,
+  lane_id TEXT,
+  user_id TEXT,
+  app_id TEXT,
+  last_verified_at TEXT,
+  verified_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS runs (
@@ -50,6 +74,12 @@ CREATE TABLE IF NOT EXISTS runs (
   mode TEXT,
   agent_id TEXT,
   parent_agent_id TEXT,
+  run_id TEXT,
+  lane_id TEXT,
+  user_id TEXT,
+  app_id TEXT,
+  last_verified_at TEXT,
+  verified_count INTEGER NOT NULL DEFAULT 0,
   evidence_json TEXT
 );
 
@@ -100,4 +130,12 @@ CREATE INDEX IF NOT EXISTS idx_runs_parent_agent ON runs(parent_agent_id);
 CREATE INDEX IF NOT EXISTS idx_research_topic ON research_sources(topic);
 CREATE INDEX IF NOT EXISTS idx_taste_kind ON taste_history(kind);
 CREATE INDEX IF NOT EXISTS idx_subspecs_run ON sub_specs(run_id);
+CREATE INDEX IF NOT EXISTS idx_runs_lane ON runs(lane_id);
+CREATE INDEX IF NOT EXISTS idx_runs_run_id ON runs(run_id);
+CREATE INDEX IF NOT EXISTS idx_decisions_lane ON decisions(lane_id);
+CREATE INDEX IF NOT EXISTS idx_errors_lane ON errors_solutions(lane_id);
+CREATE INDEX IF NOT EXISTS idx_patterns_lane ON patterns(lane_id);
+CREATE INDEX IF NOT EXISTS idx_runs_verified ON runs(last_verified_at);
+CREATE INDEX IF NOT EXISTS idx_decisions_verified ON decisions(last_verified_at);
+CREATE INDEX IF NOT EXISTS idx_errors_verified ON errors_solutions(last_verified_at);
 `;

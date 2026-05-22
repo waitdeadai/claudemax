@@ -1,5 +1,35 @@
 import type { Spec } from "@claudemax/core";
 
+// Tool rule injected as a prefix into every worker agent's system prompt.
+// Source: letta.com/blog/benchmarking-ai-agent-memory (2025-08-12) — agents
+// constrained by tool rules ("call search_files before answer_question")
+// materially outperformed unconstrained agents (LoCoMo 74.0% vs 68.5%).
+// Source: anthropic.com/engineering/effective-context-engineering-for-ai-agents
+// (2025-09-29) — "structured note-taking" (memory) is a first-class context
+// engineering technique. The dark-patterns no-fake-recall hook ALSO blocks
+// false memory recall, so the rule is consistent with the harness's other
+// safeguards.
+export const MEMORY_TOOL_RULE = `Memory policy (read before acting):
+- Before claiming any fact about prior sessions, prior decisions, or "what we did last time", call \`cmax memory recall "<topic>" --depth medium\` first. Quote the matching row verbatim, or say you have no recall.
+- After making a non-obvious architectural decision, run \`cmax memory add decision "<decision body>" --lane <lane-id>\`. After resolving an error whose fix wasn't obvious, run \`cmax memory add error-solution "<error signature> :: <fix>" --lane <lane-id>\`.
+- If you apply a recalled row and it turns out correct, mark it \`cmax memory verify <source>#<id> --by <agent-name>\` so it doesn't go stale.
+- The host process may also expose Anthropic's file-based Memory tool at /.claudemax/agent-memory/<agent-id>/. Treat that as scratch; treat the SQLite memory (cmax memory ...) as durable cross-session truth.`;
+
+// Per-lane features-checklist rule. Source: anthropic.com/engineering/
+// effective-harnesses-for-long-running-agents (2025-11-26) — coding agent
+// reads progress file + git log, picks ONE failing feature, implements,
+// verifies, commits, exits. "JSON because the model is less likely to
+// inappropriately change or overwrite JSON files."
+export const FEATURES_LIST_RULE = (featuresFilePath: string): string =>
+  `Features checklist (session contract):
+- Read ${featuresFilePath} on startup. It is a JSON object {"features":[{"id","description","passes":bool,"addedAt","lastAttemptedAt"?}]}.
+- Pick the FIRST feature with passes:false. Implement only that one this session.
+- Update lastAttemptedAt to the current ISO timestamp before you start work on the feature.
+- After implementing, run the project's verifier/test for that feature. Only set passes:true after verification succeeds.
+- Commit each completed feature in its own commit. Do not batch.
+- If the chosen feature is blocked, leave passes:false but write a one-line "blocker" field on the feature object and exit. Don't pick a different one — the next session can decide.
+- Do NOT add or delete features unless the user explicitly asks. The file is the source of truth for what this lane is doing.`;
+
 export const SPEC_WRITER_SYSTEM = `You are the claudemax spec writer. Your job is to convert a user goal into a written SPEC.md before any code is run.
 
 Hard rules:
@@ -22,9 +52,15 @@ Schema:
   "createdAt": ISO-8601 string
 }`;
 
-export const PACKET_AGENT_SYSTEM = (packetTitle: string, specGoal: string): string =>
+export const PACKET_AGENT_SYSTEM = (
+  packetTitle: string,
+  specGoal: string,
+  opts: { readonly featuresFilePath?: string } = {},
+): string =>
   `You are a claudemax worker agent. You execute ONE packet, return evidence, and exit. Don't drift beyond your packet.
 
+${MEMORY_TOOL_RULE}
+${opts.featuresFilePath ? `\n${FEATURES_LIST_RULE(opts.featuresFilePath)}\n` : ""}
 Overall goal (context only): ${specGoal}
 
 Your packet: ${packetTitle}

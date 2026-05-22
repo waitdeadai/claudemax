@@ -14,6 +14,8 @@ import {
   writeResumableState,
   updateLane,
   isComplete,
+  scaffoldFeatures,
+  defaultFeaturesPath,
   type ResumableState,
 } from "@claudemax/runtime";
 import { slugifyGoal } from "@claudemax/runtime";
@@ -32,6 +34,11 @@ export function megaCommand(): Command {
     .option("--mode <mode>", "auto | solo | teams", "auto")
     .option("--no-tdd", "skip TDD enforcement (default ON)")
     .option("--stagger-ms <n>", "delay between consecutive lane spawns to avoid Anthropic burst-protection throttle", "5000")
+    .option(
+      "--features-checklist",
+      "scaffold .claudemax/lanes/<lane-id>/features.json per lane (Anthropic 2025-11-26 long-running-agents pattern: JSON checklist subagent reads + ticks)",
+      false,
+    )
     .option("--dry-run", "print derived lane count + plan, exit", false)
     .action(
       async (
@@ -44,6 +51,7 @@ export function megaCommand(): Command {
           mode: "auto" | "solo" | "teams";
           tdd: boolean;
           staggerMs: string;
+          featuresChecklist: boolean;
           dryRun: boolean;
         },
       ) => {
@@ -107,6 +115,18 @@ export function megaCommand(): Command {
         console.log(kleur.cyan("  run id:      ") + state.runId);
         console.log(kleur.cyan("  state dir:   ") + stateDir);
         console.log(kleur.dim("  resume any time: cmax resume " + state.runId + "\n"));
+
+        if (opts.featuresChecklist) {
+          for (const lane of lanes) {
+            const featuresPath = defaultFeaturesPath(cwd, lane.id);
+            scaffoldFeatures(featuresPath, { laneId: lane.id, goal: lane.goal });
+          }
+          console.log(
+            kleur.dim(
+              `  features-checklist: scaffolded ${lanes.length} features.json file(s) at .claudemax/lanes/<id>/features.json\n`,
+            ),
+          );
+        }
 
         await driveLanes(state, decision.lanes, opts);
       },
