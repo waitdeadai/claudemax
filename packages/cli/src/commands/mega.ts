@@ -81,11 +81,6 @@ export function megaCommand(): Command {
         }
         console.log();
 
-        if (opts.dryRun) {
-          console.log(kleur.dim("  --dry-run: not firing lanes"));
-          process.exit(0);
-        }
-
         const planned = goals.map((g, i) => ({ id: dedupSlug(g, i, new Set()), goal: g, cwd }));
         const seenSlugs = new Set<string>();
         const lanes = planned.map((p, i) => {
@@ -93,6 +88,23 @@ export function megaCommand(): Command {
           seenSlugs.add(id);
           return { ...p, id };
         });
+
+        if (opts.featuresChecklist) {
+          for (const lane of lanes) {
+            const featuresPath = defaultFeaturesPath(cwd, lane.id);
+            scaffoldFeatures(featuresPath, { laneId: lane.id, goal: lane.goal });
+          }
+          console.log(
+            kleur.dim(
+              `  features-checklist: scaffolded ${lanes.length} features.json file(s) at .claudemax/lanes/<id>/features.json`,
+            ),
+          );
+        }
+
+        if (opts.dryRun) {
+          console.log(kleur.dim("  --dry-run: not firing lanes\n"));
+          process.exit(0);
+        }
 
         const state = initialState(cwd, lanes, {
           variant: opts.variant,
@@ -115,18 +127,6 @@ export function megaCommand(): Command {
         console.log(kleur.cyan("  run id:      ") + state.runId);
         console.log(kleur.cyan("  state dir:   ") + stateDir);
         console.log(kleur.dim("  resume any time: cmax resume " + state.runId + "\n"));
-
-        if (opts.featuresChecklist) {
-          for (const lane of lanes) {
-            const featuresPath = defaultFeaturesPath(cwd, lane.id);
-            scaffoldFeatures(featuresPath, { laneId: lane.id, goal: lane.goal });
-          }
-          console.log(
-            kleur.dim(
-              `  features-checklist: scaffolded ${lanes.length} features.json file(s) at .claudemax/lanes/<id>/features.json\n`,
-            ),
-          );
-        }
 
         await driveLanes(state, decision.lanes, opts);
       },
