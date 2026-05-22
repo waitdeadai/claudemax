@@ -221,7 +221,7 @@ head "install agentcloseout-physics (deterministic closeout scorer)"
 #   - rustup.rs (the rustup-init bootstrap loader; --tlsv1.2 enforced)
 #   - starship.rs/install.sh (same pattern, same shape)
 #
-PHYSICS_VERSION="${AGENTCLOSEOUT_PHYSICS_VERSION:-0.2.2}"
+PHYSICS_VERSION="${AGENTCLOSEOUT_PHYSICS_VERSION:-0.2.3}"
 PHYSICS_INSTALLER_URL="https://github.com/waitdeadai/agent-closeout-bench/releases/download/v${PHYSICS_VERSION}/agentcloseout-physics-installer.sh"
 if command -v agentcloseout-physics >/dev/null 2>&1; then
   ok "agentcloseout-physics already on PATH ($(command -v agentcloseout-physics))"
