@@ -1,4 +1,4 @@
-# Skill catalog — lean 29 active + 1 deprecated stub
+# Skill catalog — lean 32 active + 1 deprecated stub
 
 Audited for overlap. Every skill has a distinct, non-overlapping purpose. Compare to v1's 43-skill catalog: 17 cut, 3 added (`/agentteams`, `/tdd`, `/harness-audit`). Plus 2 ALIAS-for-/cmax entries (`/workflow`, `/opussonnet`) kept for v1 muscle memory. 1 deprecated stub (`/dispatch`) kept for v1 muscle memory; router should never pick it.
 
@@ -61,13 +61,15 @@ Audited for overlap. Every skill has a distinct, non-overlapping purpose. Compar
 | `/taste` | Auto-bootstrap via /deepresearch (NO 10 questions) |
 | `/deepretaste` | Drift detection vs current code |
 
-## Infrastructure (3)
+## Infrastructure (5)
 
-| Skill | Purpose |
-|---|---|
-| `/agentfactory` | Governed AgentDefinition creation + Hermes-style registry |
-| `/route` | Inspect or override the model-routing decision |
-| `/agentteams` | Manual invocation of Mode B (Claude Code Agent Teams) |
+| Skill | Purpose | Distinct from |
+|---|---|---|
+| `/agentfactory` | Governed AgentDefinition creation + Hermes-style registry | /agentteams (creation vs invocation) |
+| `/route` | Inspect or override the model-routing decision | runtime router (override vs default) |
+| `/agentteams` | Manual invocation of Mode B (Claude Code Agent Teams) | /cmax (manual vs auto-selected) |
+| `/harness-audit` | Periodic review of claudemax's own scaffolding | /cc-audit (claudemax vs upstream CC) |
+| `/cc-audit` | SOTA-2026 deepresearch-backed audit of new Claude Code CLI releases; verdict per change (IGNORE/WRAP/INTEGRATE/DEFER) | /harness-audit (upstream vs claudemax) |
 
 ## Cuts vs v1 with rationale
 

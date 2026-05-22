@@ -4,6 +4,20 @@ All notable changes to claudemax. Format loosely follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added — 2026-05-22 daily-effectiveness improvement run (cmax orchestrate 5-lane)
+
+- **`packages/runtime/src/agent-teams.ts` true parallel dispatch.** Mode B (Claude Code Agent Teams) sub-Specs now run in a DAG-aware bounded-parallel dispatcher instead of the sequential `for...await` loop. Independent leaves dispatch concurrently via `Promise.race(active)` over an active-set capped by `MAX_PARALLEL_AGENTS` (env) or `os.cpus().length`. Dependency chains from `multispec.dependencies` are honoured; cycle-stuck sub-Specs fail fast rather than deadlock. Closes the gap between CLAUDE.md rule #7's stated "max parallel by default" and Mode B's prior actual behaviour. `packages/runtime/tests/agent-teams.test.ts` adds N=4 parallelism smoke + DAG enforcement + maxParallel=2 cap + cycle handling, all using a `_spawnTeammate` injection to avoid spawning real `claude -p` subprocesses in CI.
+- **`skills/specqa/SKILL.md`** ported from minmaxing v1 — spec quality gate; blocks `/goal` handoff when a completion condition lacks a mechanically-checkable verifyHint. Pairs with the multispec engine's auto-generated sub-Specs to catch weak hints before they waste a `/goal` run.
+- **`skills/cc-audit/SKILL.md`** — SOTA-2026 deepresearch-backed audit of new Claude Code CLI releases. Pulls primary sources (canonical CHANGELOG.md, Anthropic docs, GH release notes), corroborates third-party signals (tweets, blogs, changelog mirrors), and emits per-change verdict (IGNORE / WRAP / INTEGRATE / DEFER). Caught this session: @ClaudeCodeLog tweet bot claimed 2.1.147 added a "Workflow tool (CLAUDE_CODE_WORKFLOWS=1)" — primary sources had no such entry; verdict was `unverified` and the harness skipped a fictitious integration.
+- **`packages/cli/src/commands/doctor.ts` --hooks flag** — lists every wired Stop/Pre/Post hook from `~/.claude/settings.json` + `.claude/settings.json` with source path, plus the resolved `agentcloseout-physics` binary version. Default `cmax doctor` now also asserts `package.json` and `plugin.json` version consistency.
+- **`scripts/bump-version.sh`** atomic helper for keeping `package.json` and `plugin.json` in lockstep on SemVer bumps.
+- **`install.sh` + `install.ps1` shell-alias guidance** at end of install — surfaces the `alias claude='claude --dangerously-skip-permissions'` recommendation per shell (`~/.bashrc`/`~/.zshrc`/`~/.config/fish/config.fish`/`$PROFILE`) with copy-paste-ready commands. Does NOT auto-modify rc files. Eliminates the v0.2.x first-day friction documented in `plugin.json._schemaNote`.
+- **`LICENSE` upgraded to canonical Apache-2.0 full text (202 lines).** GitHub's SPDX auto-detector now recognises the repo as `Apache-2.0` instead of `NOASSERTION` (verification post-push).
+
+### Changed
+
+- **`package.json` 0.2.0 → 0.2.2** and **`plugin.json` 0.2.1 → 0.2.2.** README and skill catalog already referenced v0.2.2 features (`/orchestrate`); the manifests now match. Future drift is gated by the new `cmax doctor` version-consistency check.
+
 ### Fixed
 
 - **`packages/core/src/models.ts` pricing correction.** Opus 4.7 is **$5 input / $25 output per MTok** (verified 2026-05-20 against [Anthropic's models overview](https://platform.claude.com/docs/en/about-claude/models/overview)). v0.2.0 had the legacy Opus 4.5 prices baked in ($15/$75) — a 3× overestimate of Opus cost. Sonnet 4.6 ($3/$15) and Haiku 4.5 ($1/$5) were already correct. Per-packet cost estimates and plan-aware demote thresholds are now accurate.

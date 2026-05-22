@@ -68,7 +68,7 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/taste` | Auto-bootstrap via /deepresearch (NO 10 questions) |
 | `/deepretaste` | Drift detection vs current code |
 
-### Infrastructure (4)
+### Infrastructure (5)
 
 | Skill | Purpose |
 |---|---|
@@ -76,8 +76,9 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/route` | Inspect or override the model-routing decision |
 | `/agentteams` | Manual invocation of Mode B (Claude Code Agent Teams) |
 | `/harness-audit` | Periodic review of claudemax's own scaffolding against current Opus capability |
+| `/cc-audit` | SOTA-2026 deepresearch-backed audit of new Claude Code CLI releases; verdict per change (IGNORE/WRAP/INTEGRATE/DEFER) so the harness never ships conflicting or redundant tools |
 
-## Total: 30 active skills (5 umbrellas + 5 research + 2 planning + 6 execution + 3 verification + 3 memory + 2 taste + 4 infrastructure = 30). Two of the 5 umbrellas (`/workflow`, `/opussonnet`) are explicit ALIAS-for-/cmax entries kept only for v1 muscle memory. One additional directory (`/dispatch`) ships as a DEPRECATED stub — router should skip; use `/parallel` or the CLI `cmax dispatch` instead.
+## Total: 32 active skills (5 umbrellas + 5 research + 2 planning + 6 execution + 3 verification + 3 memory + 2 taste + 5 infrastructure + 1 specqa porting addition = 32, includes new `/specqa` under Planning and new `/cc-audit` under Infrastructure landed 2026-05-22). Two of the 5 umbrellas (`/workflow`, `/opussonnet`) are explicit ALIAS-for-/cmax entries kept only for v1 muscle memory. One additional directory (`/dispatch`) ships as a DEPRECATED stub — router should skip; use `/parallel` or the CLI `cmax dispatch` instead.
 
 Lean, audited for overlap. Cuts vs v1's 43-skill catalog: MiniMax-specific skills dropped entirely; /webresearch merged into /deepresearch; /autoplan into the multispec engine; /qa into /verify; /digestaste + /digestflow are internal runtime functions; /tastebootstrap replaced by auto-bootstrap /taste; product-specific skills (/defineicp /icpweek /claudeproduct etc.) deferred.
 
