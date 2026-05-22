@@ -1,13 +1,16 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import * as os from "node:os";
 import { renderSpecMarkdown, type MultiSpec, type Spec } from "@claudemax/core";
 
 export interface AgentTeamsRunOptions {
   readonly cwd: string;
   readonly stateDir?: string;
+  readonly maxParallel?: number;
   readonly onTeammateStart?: (subSpecId: string) => void;
   readonly onTeammateEnd?: (subSpecId: string, status: "finished" | "blocked" | "failed") => void;
+  readonly _spawnTeammate?: (opts: SpawnTeammateOptions) => Promise<"finished" | "blocked" | "failed">;
 }
 
 export interface AgentTeamsRunResult {
@@ -15,6 +18,13 @@ export interface AgentTeamsRunResult {
   readonly sharedTaskListPath: string;
   readonly worktreeDir: string;
   readonly agentViewCommand: string;
+}
+
+export interface SpawnTeammateOptions {
+  readonly cwd: string;
+  readonly stateDir: string;
+  readonly subSpecId: string;
+  readonly sharedTaskListPath: string;
 }
 
 export async function runAgentTeams(
@@ -37,26 +47,78 @@ export async function runAgentTeams(
 
   const perSubSpec: Record<string, "finished" | "blocked" | "failed"> = {};
 
-  for (const subSpec of multispec.subSpecs) {
-    const id = subSpecIdOf(subSpec);
-    opts.onTeammateStart?.(id);
-    perSubSpec[id] = await spawnTeammate({
-      cwd: opts.cwd,
-      stateDir,
-      subSpecId: id,
-      sharedTaskListPath,
-    });
-    opts.onTeammateEnd?.(id, perSubSpec[id]!);
+  const maxParallel = resolveMaxParallel(opts.maxParallel, multispec.subSpecs.length);
+  const spawnImpl = opts._spawnTeammate ?? spawnTeammate;
+
+  const remaining = new Map<string, Spec>();
+  const dependencies = new Map<string, Set<string>>();
+  for (const s of multispec.subSpecs) {
+    const id = subSpecIdOf(s);
+    remaining.set(id, s);
+    dependencies.set(id, new Set());
+  }
+  for (const dep of multispec.dependencies) {
+    if (dependencies.has(dep.from) && remaining.has(dep.to)) {
+      dependencies.get(dep.from)!.add(dep.to);
+    }
+  }
+
+  const active = new Set<Promise<void>>();
+
+  while (remaining.size > 0 || active.size > 0) {
+    while (active.size < maxParallel) {
+      const next = pickReady(remaining, dependencies);
+      if (!next) break;
+      const id = subSpecIdOf(next);
+      remaining.delete(id);
+      opts.onTeammateStart?.(id);
+      const p = spawnImpl({
+        cwd: opts.cwd,
+        stateDir,
+        subSpecId: id,
+        sharedTaskListPath,
+      })
+        .then((status) => {
+          perSubSpec[id] = status;
+          opts.onTeammateEnd?.(id, status);
+          for (const deps of dependencies.values()) deps.delete(id);
+        })
+        .finally(() => {
+          active.delete(p);
+        });
+      active.add(p);
+    }
+
+    if (active.size === 0 && remaining.size > 0) {
+      for (const [id] of remaining) {
+        perSubSpec[id] = "failed";
+        opts.onTeammateEnd?.(id, "failed");
+      }
+      remaining.clear();
+      break;
+    }
+
+    if (active.size > 0) {
+      await Promise.race(active);
+    }
   }
 
   return { perSubSpec, sharedTaskListPath, worktreeDir, agentViewCommand };
 }
 
-interface SpawnTeammateOptions {
-  readonly cwd: string;
-  readonly stateDir: string;
-  readonly subSpecId: string;
-  readonly sharedTaskListPath: string;
+function pickReady(remaining: Map<string, Spec>, deps: Map<string, Set<string>>): Spec | undefined {
+  for (const [id, s] of remaining) {
+    if (deps.get(id)!.size === 0) return s;
+  }
+  return undefined;
+}
+
+function resolveMaxParallel(override: number | undefined, total: number): number {
+  if (override != null && override > 0) return Math.min(override, total);
+  const env = Number(process.env.MAX_PARALLEL_AGENTS);
+  if (Number.isFinite(env) && env > 0) return Math.min(env, total);
+  const cpus = Math.max(1, os.cpus().length);
+  return Math.max(1, Math.min(cpus, total));
 }
 
 async function spawnTeammate(o: SpawnTeammateOptions): Promise<"finished" | "blocked" | "failed"> {
