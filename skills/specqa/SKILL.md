@@ -1,6 +1,7 @@
 ---
 name: specqa
 description: Spec quality gate. Every completion condition must have a mechanically-checkable verifyHint (file path, command, test name, behavior). Blocks /goal handoff if the spec wouldn't be verifiable.
+allowed-tools: Read Grep Glob Bash
 ---
 
 # /specqa — spec quality gate
