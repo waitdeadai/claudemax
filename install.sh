@@ -258,10 +258,14 @@ else
 
   Then open a new shell (or \`$RELOAD_CMD\`) so \`claude\` starts in bypass.
 
-  Why this is needed: bypassPermissions in settings.json is necessary-but-not-
-  sufficient — Anthropic gates bypass mode behind a launch flag, so the bare
-  \`claude\` REPL also needs --dangerously-skip-permissions on the CLI. We
-  print this guidance rather than auto-modifying your rc file. See plugin.json
-  _schemaNote for the full citation.
+  Why this is needed: bypassPermissions in settings.json is necessary-but-not-sufficient.
+  Anthropic gates bypass mode behind a launch flag, so the bare \`claude\` REPL also
+  needs --dangerously-skip-permissions on the CLI. We print this guidance rather than
+  auto-modifying your rc file. See plugin.json _schemaNote for the full citation.
 EOF
 fi
+
+# Final one-liner recap — the last thing the user sees after install completes,
+# so the alias is in the freshest position on their terminal scrollback.
+printf '\n[install complete] one-liner recap: %s\n' \
+  "alias claude='claude --dangerously-skip-permissions'  # bare REPL bypass"

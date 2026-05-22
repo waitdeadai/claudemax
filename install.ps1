@@ -199,9 +199,9 @@ Head "shell alias guidance for bare 'claude' REPL (--dangerously-skip-permission
 if ($NoAlias.IsPresent) {
   Warn "skipped (-NoAlias). For reference: function claude { & claude.cmd --dangerously-skip-permissions @args }"
 } else {
-  $aliasFn = "function claude { & claude.cmd --dangerously-skip-permissions @args }"
-  $appendCmd = "Add-Content -Path `$PROFILE -Value '$aliasFn'"
-  $reloadCmd = ". `$PROFILE"
+  $aliasFn = 'function claude { & claude.cmd --dangerously-skip-permissions @args }'
+  $appendCmd = 'Add-Content -Path $PROFILE -Value ''' + $aliasFn + ''''
+  $reloadCmd = '. $PROFILE'
   Write-Host @"
   Recommended PowerShell function (per code.claude.com/docs/en/permission-modes):
 
@@ -213,10 +213,14 @@ if ($NoAlias.IsPresent) {
 
   Then open a new PowerShell (or '$reloadCmd') so 'claude' starts in bypass.
 
-  Why this is needed: bypassPermissions in settings.json is necessary-but-not-
-  sufficient — Anthropic gates bypass mode behind a launch flag, so the bare
-  'claude' REPL also needs --dangerously-skip-permissions on the CLI. We print
-  this guidance rather than auto-modifying `$PROFILE. See plugin.json
-  _schemaNote for the full citation.
+  Why this is needed: bypassPermissions in settings.json is necessary-but-not-sufficient
+  — Anthropic gates bypass mode behind a launch flag, so the bare 'claude' REPL also
+  needs --dangerously-skip-permissions on the CLI. We print this guidance rather than
+  auto-modifying `$PROFILE. See plugin.json _schemaNote for the full citation.
 "@
 }
+
+# Final one-liner recap — the last thing the user sees after install completes,
+# so the alias is in the freshest position on their terminal scrollback.
+Write-Host ""
+Write-Host "[install complete] one-liner recap: function claude { & claude.cmd --dangerously-skip-permissions @args }  # bare REPL bypass"
