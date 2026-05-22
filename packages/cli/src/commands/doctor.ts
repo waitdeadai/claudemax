@@ -110,23 +110,6 @@ export function doctorCommand(): Command {
         console.log(kleur.dim("  fix with: scripts/bump-version.sh <semver>"));
         process.exit(1);
       }
-
-      const ghCheck = checkGithubSocialPreview(process.cwd());
-      console.log(kleur.bold("\ngithub"));
-      if (ghCheck.skipped) {
-        console.log(kleur.dim(`  (social preview check skipped: ${ghCheck.reason})`));
-      } else if (ghCheck.hasCustom) {
-        console.log(`  ${kleur.green("OK")}  custom social preview set for ${ghCheck.repo}`);
-      } else {
-        console.log(
-          `  ${kleur.yellow("ADVISORY")} no custom social preview on ${ghCheck.repo} — link previews fall back to GitHub default`,
-        );
-        console.log(
-          kleur.dim(
-            `  upload: github.com/${ghCheck.repo}/settings → General → Social preview → assets/og-image.png`,
-          ),
-        );
-      }
     });
 }
 
@@ -276,43 +259,6 @@ function readVersion(path: string): string | null {
     return typeof parsed.version === "string" ? parsed.version : null;
   } catch {
     return null;
-  }
-}
-
-interface GithubSocialPreviewCheck {
-  skipped: boolean;
-  reason?: string;
-  repo?: string;
-  hasCustom?: boolean;
-}
-
-function checkGithubSocialPreview(cwd: string): GithubSocialPreviewCheck {
-  let remoteUrl: string;
-  try {
-    remoteUrl = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  } catch {
-    return { skipped: true, reason: "no git remote configured" };
-  }
-  const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
-  if (!match) return { skipped: true, reason: "origin is not a github.com remote" };
-  const owner = match[1]!;
-  const name = match[2]!;
-  const repoFull = `${owner}/${name}`;
-  const query = `query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { usesCustomOpenGraphImage } }`;
-  try {
-    const out = execFileSync(
-      "gh",
-      ["api", "graphql", "-f", `query=${query}`, "-F", `owner=${owner}`, "-F", `name=${name}`],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-    );
-    const parsed = JSON.parse(out) as { data?: { repository?: { usesCustomOpenGraphImage?: boolean } } };
-    const hasCustom = parsed.data?.repository?.usesCustomOpenGraphImage === true;
-    return { skipped: false, repo: repoFull, hasCustom };
-  } catch {
-    return { skipped: true, reason: "gh CLI unavailable or not authenticated" };
   }
 }
 
