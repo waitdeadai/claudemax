@@ -22,7 +22,6 @@ import { orchestrateCommand } from "./commands/orchestrate.js";
 import { megaCommand } from "./commands/mega.js";
 import { resumeCommand } from "./commands/resume.js";
 import { scheduleCommand } from "./commands/schedule.js";
-import { verdictJudgeCommand } from "./commands/verdict-judge.js";
 
 const program = new Command();
 
@@ -45,7 +44,6 @@ program.addCommand(specCommand());
 program.addCommand(routeCommand());
 program.addCommand(goalCommand());
 program.addCommand(verifyCommand());
-program.addCommand(verdictJudgeCommand());
 program.addCommand(tddCommand());
 program.addCommand(dispatchCommand());
 program.addCommand(memoryCommand());
