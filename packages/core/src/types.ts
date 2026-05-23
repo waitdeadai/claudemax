@@ -179,10 +179,11 @@ export interface VerificationReport {
   readonly spec: Spec;
   readonly perCondition: readonly VerificationFinding[];
   readonly suppressedLowConfidence: readonly VerificationFinding[];
-  readonly verdict: "verified" | "partial" | "failed";
+  readonly verdict: "verified" | "partial" | "failed" | "unverified";
   readonly verifierTier: ModelTier;
   readonly notes: string;
   readonly confidenceThreshold: number;
+  readonly reason?: string;
 }
 
 export interface MultiSpecVerification {

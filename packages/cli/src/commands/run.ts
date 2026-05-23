@@ -172,7 +172,7 @@ export function runCommand(): Command {
           artifacts: Object.fromEntries(subResults.map((r) => [r.id, r.status])),
         });
 
-        let rollupVerdict: "verified" | "partial" | "failed" | "skipped" = "skipped";
+        let rollupVerdict: "verified" | "partial" | "failed" | "unverified" | "skipped" = "skipped";
         if (opts.verify) {
           console.log(kleur.cyan("→ phase 4/5  per-sub-Spec /verify (parallel, blind Opus)"));
           const verifications = await Promise.all(

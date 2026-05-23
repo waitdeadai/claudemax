@@ -14,6 +14,7 @@ import {
   type EffortLevel,
 } from "./sdk-options.js";
 import { runInteractiveVerify } from "./interactive-verify.js";
+import { judgeWithHaiku, type JudgeAction } from "./haiku-judge.js";
 
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.8;
 
@@ -24,6 +25,7 @@ export interface VerifyOptions {
   readonly effort?: EffortLevel;
   readonly confidenceThreshold?: number;
   readonly skipInteractive?: boolean;
+  readonly doubleCheck?: boolean;
 }
 
 const FAILURE_CATEGORIES: readonly FailureCategory[] = [
@@ -155,7 +157,7 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
   const consolidated = consolidateSimilar(kept);
   const verdict = computeVerdict(consolidated, parsed.verdict);
 
-  return {
+  const opusReport: VerificationReport = {
     spec,
     perCondition: consolidated,
     suppressedLowConfidence: suppressed,
@@ -163,6 +165,78 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
     verifierTier: "opus",
     notes: parsed.notes,
     confidenceThreshold: threshold,
+  };
+
+  if (!opts.doubleCheck) return opusReport;
+
+  const haiku = await runHaikuDoubleCheck(opusReport, opts);
+  return applyDoubleCheck(opusReport, haiku);
+}
+
+export interface DoubleCheckOutcome {
+  readonly verdict: "verified" | "partial" | "failed";
+  readonly reason: string;
+  readonly action: JudgeAction;
+}
+
+async function runHaikuDoubleCheck(
+  opus: VerificationReport,
+  opts: VerifyOptions,
+): Promise<DoubleCheckOutcome> {
+  const findings = opus.perCondition
+    .map((f) => `- [${f.id}] met=${f.met} conf=${f.confidence.toFixed(2)} :: ${f.evidence}`)
+    .join("\n");
+  const content = [
+    `Opus verifier verdict: ${opus.verdict}`,
+    `Spec goal: ${opus.spec.goal}`,
+    `Per-condition findings:`,
+    findings || "(none)",
+    "",
+    "Re-judge whether the Opus verdict is well-supported by these findings.",
+    "Use LOG when you agree with Opus; use BLOCK when you strongly disagree (verdict should have been the opposite); use WARN/REDACT when you partially disagree.",
+  ].join("\n");
+  const v = await judgeWithHaiku(
+    {
+      content,
+      hookName: "verify-double-check",
+      categories: ["verifier-disagreement"],
+    },
+    { cwd: opts.cwd },
+  );
+  return {
+    verdict: actionToVerdict(v.action),
+    reason: v.reason,
+    action: v.action,
+  };
+}
+
+function actionToVerdict(a: JudgeAction): "verified" | "partial" | "failed" {
+  switch (a) {
+    case "LOG":
+      return "verified";
+    case "WARN":
+    case "REDACT":
+      return "partial";
+    case "BLOCK":
+      return "failed";
+  }
+}
+
+export function applyDoubleCheck(
+  opus: VerificationReport,
+  haiku:
+    | { readonly verdict: "verified" | "partial" | "failed"; readonly reason?: string }
+    | undefined,
+): VerificationReport {
+  if (!haiku) return opus;
+  if (opus.verdict === haiku.verdict) return opus;
+  const reason = `doubleCheck disagreement — opus=${opus.verdict}, haiku=${haiku.verdict}${
+    haiku.reason ? `; haiku: ${haiku.reason}` : ""
+  }`;
+  return {
+    ...opus,
+    verdict: "unverified",
+    reason,
   };
 }
 
