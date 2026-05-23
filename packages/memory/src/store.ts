@@ -345,6 +345,41 @@ export class MemoryStore {
     return rowid;
   }
 
+  // Fuzzy LOWER-LIKE match on topic, bounded by a max-age window. Used by
+  // deepresearch to seed prior sources for a related topic before re-querying
+  // the web.
+  recentResearchSourcesForTopic(
+    topic: string,
+    maxAgeDays: number = 7,
+    limit: number = 12,
+  ): readonly ResearchSourceRecord[] {
+    const rows = this.db
+      .prepare(
+        `SELECT topic, url, title, published_at AS publishedAt, relevance, excerpt
+         FROM research_sources
+         WHERE LOWER(topic) LIKE LOWER('%' || ? || '%')
+           AND ts > datetime('now', '-' || ? || ' days')
+         ORDER BY ts DESC
+         LIMIT ?`,
+      )
+      .all(topic, maxAgeDays, limit) as Array<{
+      topic: string;
+      url: string;
+      title: string;
+      publishedAt: string | null;
+      relevance: number;
+      excerpt: string;
+    }>;
+    return rows.map((r) => ({
+      topic: r.topic,
+      url: r.url,
+      title: r.title,
+      publishedAt: r.publishedAt ?? undefined,
+      relevance: r.relevance,
+      excerpt: r.excerpt,
+    }));
+  }
+
   recordTaste(t: TasteRecord): number {
     const stmt = this.db.prepare(
       `INSERT INTO taste_history (kind, body, source) VALUES (?, ?, ?)`,

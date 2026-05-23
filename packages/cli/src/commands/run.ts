@@ -83,7 +83,7 @@ export function runCommand(): Command {
             rootGoal: goal,
             phase: "deepresearch",
             summary: `${brief.sources.length} sources, ${brief.keyFindings.length} key findings on "${brief.topic}"`,
-            nextInputs: [`research brief in memory`, ...brief.keyFindings.slice(0, 5)],
+            nextInputs: [`research brief in memory`, ...brief.keyFindings.slice(0, 5).map((f) => f.finding)],
             artifacts: { sourceCount: String(brief.sources.length), topic: brief.topic },
           });
         }

@@ -9,12 +9,13 @@ The research substrate for every umbrella. Anchors decisions on current-time evi
 
 ## Process
 
-1. Decompose the topic into 3–8 sub-queries.
-2. Run WebSearch + WebFetch in parallel across the sub-queries.
-3. Read primary sources first (official docs, vendor announcements, RFCs, repos). De-prioritize SEO blogspam.
-4. Resolve conflicts by citing the most recent authoritative source.
-5. Synthesize via Opus into a ResearchBrief: topic, summary, keyFindings, sources (URL + relevance + excerpt + accessedAt), openQuestions.
-6. Persist sources to `memory.research_sources` for future re-use.
+1. **Memory-first ledger lookup.** Before any web call, query `memory.research_sources` for the topic within the last 7 days (default window). If a fresh prior brief exists, reuse it and skip steps 2–5. Outside the window, surface the prior brief as "possibly stale" alongside a fresh pass so the caller can compare. Disable the shortcut with `memoryFirst: false` (or `--no-memory-first` on the CLI) when the topic is known-volatile and must re-fetch every run.
+2. Decompose the topic into 3–8 sub-queries.
+3. Run WebSearch + WebFetch in parallel across the sub-queries.
+4. Read primary sources first (official docs, vendor announcements, RFCs, repos). De-prioritize SEO blogspam.
+5. Resolve conflicts by citing the most recent authoritative source.
+6. Synthesize via Opus into a ResearchBrief: topic, summary, keyFindings, sources (URL + relevance + excerpt + accessedAt), openQuestions.
+7. Persist sources to `memory.research_sources` for future re-use.
 
 ## When to invoke (manually)
 
@@ -28,6 +29,7 @@ JSON `ResearchBrief` matching the schema in `packages/core/src/types.ts`. CLI: `
 
 ## Anti-pattern protection
 
-- Every claim attaches ≥ 1 source URL with an `accessedAt` field. If you see a claim without a source, the dark-patterns `no-fake-cite` hook will block it.
+- **Citation linkage is schema-enforced.** Every `keyFinding` now carries ≥ 1 `sourceUrl` drawn from the brief's `sources` array — the JSON schema rejects findings without one. Uncitable findings are dropped at generation time rather than emitted naked; the dark-patterns `no-fake-cite` hook is the second line of defense, not the first.
+- Every claim attaches ≥ 1 source URL with an `accessedAt` field.
 - Sources with relevance < 0.3 are dropped.
 - `openQuestions` is mandatory — research that returns "everything is clear" is suspicious.

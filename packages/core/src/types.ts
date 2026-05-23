@@ -103,10 +103,15 @@ export interface ResearchSource {
   readonly excerpt: string;
 }
 
+export interface KeyFinding {
+  readonly finding: string;
+  readonly sourceUrls: readonly string[];
+}
+
 export interface ResearchBrief {
   readonly topic: string;
   readonly summary: string;
-  readonly keyFindings: readonly string[];
+  readonly keyFindings: readonly KeyFinding[];
   readonly sources: readonly ResearchSource[];
   readonly openQuestions: readonly string[];
   readonly createdAt: string;

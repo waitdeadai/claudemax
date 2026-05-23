@@ -21,7 +21,9 @@ export function researchCommand(): Command {
       console.log(brief.summary);
 
       console.log(kleur.bold(`\nkey findings`));
-      for (const f of brief.keyFindings) console.log(`  - ${f}`);
+      for (const f of brief.keyFindings) {
+        console.log(`  - ${f.finding} (cites ${f.sourceUrls.length} source URLs)`);
+      }
 
       console.log(kleur.bold(`\nsources (${brief.sources.length})`));
       for (const s of brief.sources) {
