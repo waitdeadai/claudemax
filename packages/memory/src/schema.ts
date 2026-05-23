@@ -120,22 +120,19 @@ CREATE VIRTUAL TABLE IF NOT EXISTS mem_fts USING fts5(
   tokenize = 'porter'
 );
 
+-- Indexes on baseline columns (always present on fresh + old DBs).
 CREATE INDEX IF NOT EXISTS idx_episodes_kind ON episodes(kind);
 CREATE INDEX IF NOT EXISTS idx_decisions_topic ON decisions(topic);
 CREATE INDEX IF NOT EXISTS idx_errors_sig ON errors_solutions(signature);
 CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
 CREATE INDEX IF NOT EXISTS idx_runs_ts ON runs(ts);
-CREATE INDEX IF NOT EXISTS idx_runs_agent ON runs(agent_id);
-CREATE INDEX IF NOT EXISTS idx_runs_parent_agent ON runs(parent_agent_id);
 CREATE INDEX IF NOT EXISTS idx_research_topic ON research_sources(topic);
 CREATE INDEX IF NOT EXISTS idx_taste_kind ON taste_history(kind);
 CREATE INDEX IF NOT EXISTS idx_subspecs_run ON sub_specs(run_id);
-CREATE INDEX IF NOT EXISTS idx_runs_lane ON runs(lane_id);
-CREATE INDEX IF NOT EXISTS idx_runs_run_id ON runs(run_id);
-CREATE INDEX IF NOT EXISTS idx_decisions_lane ON decisions(lane_id);
-CREATE INDEX IF NOT EXISTS idx_errors_lane ON errors_solutions(lane_id);
-CREATE INDEX IF NOT EXISTS idx_patterns_lane ON patterns(lane_id);
-CREATE INDEX IF NOT EXISTS idx_runs_verified ON runs(last_verified_at);
-CREATE INDEX IF NOT EXISTS idx_decisions_verified ON decisions(last_verified_at);
-CREATE INDEX IF NOT EXISTS idx_errors_verified ON errors_solutions(last_verified_at);
+
+-- Indexes on columns added by migrate() (agent_id, parent_agent_id, lane_id,
+-- run_id, last_verified_at) are NOT created here. SCHEMA_SQL runs BEFORE
+-- migrate() and would throw "no such column" on old DBs whose CREATE TABLE IF
+-- NOT EXISTS short-circuits. migrate() recreates these indexes AFTER the
+-- columns exist (see store.ts migrate()).
 `;
