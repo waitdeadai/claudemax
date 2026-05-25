@@ -10,12 +10,14 @@ export function verifyCommand(): Command {
     .description("Independent Opus supervisor verifies SPEC was met")
     .argument("[spec]", "path to SPEC.md", "SPEC.md")
     .option("--confidence <n>", "confidence threshold for primary findings (0..1)", "0.8")
-    .action(async (specPath: string, opts: { confidence: string }) => {
+    .option("--max-turns <n>", "turn budget for the blind verifier (raise for large multi-condition specs)", "40")
+    .action(async (specPath: string, opts: { confidence: string; maxTurns: string }) => {
       const md = readFileSync(resolve(process.cwd(), specPath), "utf8");
       const spec = parseSpecMarkdown(md);
       const confidenceThreshold = Number(opts.confidence);
-      console.log(kleur.cyan(`→ verifying ${spec.title} with blind Opus pass (threshold ${confidenceThreshold})...`));
-      const report = await verify(spec, { confidenceThreshold });
+      const maxTurns = Number(opts.maxTurns);
+      console.log(kleur.cyan(`→ verifying ${spec.title} with blind Opus pass (threshold ${confidenceThreshold}, maxTurns ${maxTurns})...`));
+      const report = await verify(spec, { confidenceThreshold, maxTurns });
       const color =
         report.verdict === "verified"
           ? kleur.green
