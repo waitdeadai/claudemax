@@ -86,3 +86,17 @@ export function modelById(id: ModelId): ModelSpec {
   }
   throw new Error(`Unknown model id: ${id}`);
 }
+
+/** The two FAT-umbrella variants. */
+export type Variant = "opussonnet" | "opusolo";
+
+/**
+ * Executor model for a variant's sub-Spec execution.
+ * - opussonnet → Sonnet executes (Opus still plans/decomposes/verifies).
+ * - opusolo    → Opus executes everything.
+ * Planning (decompose) and verification are NOT routed by this — they always
+ * stay on Opus regardless of variant (house rule #4).
+ */
+export function execModelForVariant(variant: Variant): ModelId {
+  return variant === "opusolo" ? MODELS.opus.id : MODELS.sonnet.id;
+}

@@ -2,12 +2,14 @@ import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as os from "node:os";
-import { renderSpecMarkdown, type MultiSpec, type Spec } from "@claudemax/core";
+import { renderSpecMarkdown, type ModelId, type MultiSpec, type Spec } from "@claudemax/core";
 
 export interface AgentTeamsRunOptions {
   readonly cwd: string;
   readonly stateDir?: string;
   readonly maxParallel?: number;
+  /** Executor model for each teammate (passed as `claude --model`). Defaults to the CLI default. */
+  readonly model?: ModelId;
   readonly onTeammateStart?: (subSpecId: string) => void;
   readonly onTeammateEnd?: (subSpecId: string, status: "finished" | "blocked" | "failed") => void;
   readonly _spawnTeammate?: (opts: SpawnTeammateOptions) => Promise<"finished" | "blocked" | "failed">;
@@ -25,6 +27,7 @@ export interface SpawnTeammateOptions {
   readonly stateDir: string;
   readonly subSpecId: string;
   readonly sharedTaskListPath: string;
+  readonly model?: ModelId;
 }
 
 export async function runAgentTeams(
@@ -77,6 +80,7 @@ export async function runAgentTeams(
         stateDir,
         subSpecId: id,
         sharedTaskListPath,
+        model: opts.model,
       })
         .then((status) => {
           perSubSpec[id] = status;
@@ -132,10 +136,13 @@ async function spawnTeammate(o: SpawnTeammateOptions): Promise<"finished" | "blo
     `When finished emit a FINISHED block with per-condition evidence; when blocked emit BLOCKED with the specific need.`,
   ].join("\n");
 
+  const args = ["-p", prompt, "--dangerously-skip-permissions"];
+  if (o.model) args.push("--model", o.model);
+
   return new Promise((resolve) => {
     const child = spawn(
       "claude",
-      ["-p", prompt, "--dangerously-skip-permissions"],
+      args,
       {
         cwd: o.cwd,
         env: {

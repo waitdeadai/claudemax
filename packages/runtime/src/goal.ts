@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { spawn } from "node:child_process";
-import { MODELS, type Spec } from "@claudemax/core";
+import { MODELS, modelById, type ModelId, type Spec } from "@claudemax/core";
 import { GOAL_DRIVER_SYSTEM } from "./prompts.js";
 import {
   baseSdkOptions,
@@ -13,6 +13,8 @@ import {
 export interface GoalRunOptions {
   readonly cwd?: string;
   readonly maxTurns?: number;
+  /** Executor model. Defaults to Opus; opussonnet routing passes Sonnet here. */
+  readonly model?: ModelId;
   readonly maxBudgetUsd?: number;
   readonly permissionMode?: "default" | "acceptEdits" | "plan" | "bypassPermissions" | "auto";
   readonly effort?: EffortLevel;
@@ -36,6 +38,10 @@ export interface GoalRunResult {
 
 export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<GoalRunResult> {
   const maxTurns = opts.maxTurns ?? 200;
+  const execModel = opts.model ?? MODELS.opus.id;
+  const execTier = modelById(execModel).tier;
+  // Fallback to the other major tier so an overload on the executor still makes progress.
+  const fallbackModel = execModel === MODELS.sonnet.id ? MODELS.opus.id : MODELS.sonnet.id;
   let turns = 0;
   let tokensIn = 0;
   let tokensOut = 0;
@@ -53,7 +59,7 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
     maxBudgetUsd: opts.maxBudgetUsd,
     taskBudgetTokens:
       opts.maxBudgetUsd !== undefined
-        ? estimateTaskBudgetTokens("opus", opts.maxBudgetUsd)
+        ? estimateTaskBudgetTokens(execTier, opts.maxBudgetUsd)
         : undefined,
     abortSignal: opts.abortSignal,
   });
@@ -61,8 +67,8 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
   for await (const message of query({
     prompt: `Pursue the goal in the system prompt. Begin by re-reading the SPEC carefully, then act. Stop only when every completion condition is met or you are genuinely blocked.`,
     options: {
-      model: MODELS.opus.id,
-      fallbackModel: MODELS.sonnet.id,
+      model: execModel,
+      fallbackModel,
       systemPrompt: {
         type: "preset",
         preset: "claude_code",

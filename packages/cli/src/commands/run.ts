@@ -2,7 +2,7 @@ import { Command } from "commander";
 import kleur from "kleur";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { renderSpecMarkdown, type Spec } from "@claudemax/core";
+import { execModelForVariant, renderSpecMarkdown, type ModelId, type Spec } from "@claudemax/core";
 import {
   runGoal,
   verify,
@@ -10,6 +10,7 @@ import {
   deepResearch,
   decomposeIntoMultiSpec,
   runTddCycle,
+  runAgentTeams,
   writeHandoff,
   isSaturationSignal,
   parseResetTime,
@@ -60,9 +61,13 @@ export function runCommand(): Command {
         const cwd = process.cwd();
         const confidenceThreshold = Number(opts.confidence);
 
+        // Variant → executor model. opusolo runs Opus everywhere; opussonnet routes
+        // sub-Spec execution to Sonnet (plan/decompose + verify always stay Opus — rule #4).
+        const execModel: ModelId = execModelForVariant(opts.variant);
+
         console.log(
           kleur.dim(
-            `plan=${plan.plan} billing=${plan.billing} credit=${plan.monthlyCreditUsd ?? "n/a"}/mo variant=${opts.variant} mode=${opts.mode} tdd=${opts.tdd ? "on" : "off"} conf>=${confidenceThreshold}`,
+            `plan=${plan.plan} billing=${plan.billing} credit=${plan.monthlyCreditUsd ?? "n/a"}/mo variant=${opts.variant} exec=${execModel} mode=${opts.mode} tdd=${opts.tdd ? "on" : "off"} conf>=${confidenceThreshold}`,
           ),
         );
 
@@ -127,50 +132,70 @@ export function runCommand(): Command {
           });
 
           phase = "goal";
-          console.log(
-            kleur.cyan(
-              `→ phase 3/5  parallel ${opts.tdd ? "TDD-cycle" : "/goal"} per sub-Spec`,
-            ),
-          );
+          const permissionMode = opts.permission as
+            | "default"
+            | "acceptEdits"
+            | "plan"
+            | "bypassPermissions"
+            | "auto";
+          // Mode B (Agent Teams) when the spec is large enough (or forced); else Mode A (in-process).
+          const effectiveMode = opts.mode === "auto" ? multispec.mode : opts.mode;
           const subResults: Array<{ id: string; status: string; turns: number }> = [];
-          await Promise.all(
-            multispec.subSpecs.map(async (sub) => {
-              const id = slugify(sub.title);
-              if (opts.tdd && hasTestVerifyHint(sub)) {
-                const t = await runTddCycle(sub, {
-                  cwd,
-                  maxTurns: Number(opts.maxTurns),
-                  permissionMode: opts.permission as
-                    | "default"
-                    | "acceptEdits"
-                    | "plan"
-                    | "bypassPermissions"
-                    | "auto",
-                });
-                const status = t.phase === "test-passes" ? "finished" : t.phase === "stalled" ? "blocked" : "partial";
-                subResults.push({ id, status, turns: t.turnsUsed });
-                const colored = status === "finished" ? kleur.green : status === "blocked" ? kleur.yellow : kleur.yellow;
-                console.log(colored(`  tdd:${t.phase}  ${id}  ${t.turnsUsed} turns`));
-                return;
-              }
-              const r = await runGoal(sub, {
-                cwd,
-                maxTurns: Number(opts.maxTurns),
-                permissionMode: opts.permission as
-                  | "default"
-                  | "acceptEdits"
-                  | "plan"
-                  | "bypassPermissions"
-                  | "auto",
-              });
-              subResults.push({ id, status: r.status, turns: r.turns });
-              console.log(
-                (r.status === "finished" ? kleur.green : kleur.yellow)(
-                  `  ${r.status === "finished" ? "ok    " : "block "} ${id}  ${r.turns} turns`,
+
+          if (effectiveMode === "teams") {
+            console.log(
+              kleur.cyan(
+                `→ phase 3/5  Agent Teams (Mode B) — ${multispec.subSpecs.length} teammates, exec=${execModel}`,
+              ),
+            );
+            const teams = await runAgentTeams(multispec, {
+              cwd,
+              model: execModel,
+              onTeammateEnd: (id, status) =>
+                console.log(
+                  (status === "finished" ? kleur.green : kleur.yellow)(`  team:${status}  ${id}`),
                 ),
-              );
-            }),
-          );
+            });
+            for (const [id, status] of Object.entries(teams.perSubSpec)) {
+              subResults.push({ id, status, turns: 0 });
+            }
+          } else {
+            console.log(
+              kleur.cyan(
+                `→ phase 3/5  parallel ${opts.tdd ? "TDD-cycle" : "/goal"} per sub-Spec (solo, exec=${execModel})`,
+              ),
+            );
+            await Promise.all(
+              multispec.subSpecs.map(async (sub) => {
+                const id = slugify(sub.title);
+                if (opts.tdd && hasTestVerifyHint(sub)) {
+                  const t = await runTddCycle(sub, {
+                    cwd,
+                    model: execModel,
+                    maxTurns: Number(opts.maxTurns),
+                    permissionMode,
+                  });
+                  const status = t.phase === "test-passes" ? "finished" : t.phase === "stalled" ? "blocked" : "partial";
+                  subResults.push({ id, status, turns: t.turnsUsed });
+                  const colored = status === "finished" ? kleur.green : status === "blocked" ? kleur.yellow : kleur.yellow;
+                  console.log(colored(`  tdd:${t.phase}  ${id}  ${t.turnsUsed} turns`));
+                  return;
+                }
+                const r = await runGoal(sub, {
+                  cwd,
+                  model: execModel,
+                  maxTurns: Number(opts.maxTurns),
+                  permissionMode,
+                });
+                subResults.push({ id, status: r.status, turns: r.turns });
+                console.log(
+                  (r.status === "finished" ? kleur.green : kleur.yellow)(
+                    `  ${r.status === "finished" ? "ok    " : "block "} ${id}  ${r.turns} turns`,
+                  ),
+                );
+              }),
+            );
+          }
           writeHandoff({
             cwd,
             rootGoal: goal,

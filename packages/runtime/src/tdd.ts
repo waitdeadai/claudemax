@@ -1,10 +1,12 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { MODELS, type Spec, type SpecCompletionCondition } from "@claudemax/core";
+import { MODELS, type ModelId, type Spec, type SpecCompletionCondition } from "@claudemax/core";
 import { baseSdkOptions, type EffortLevel } from "./sdk-options.js";
 
 export interface TddCycleOptions {
   readonly cwd?: string;
   readonly maxTurns?: number;
+  /** Executor model for the implement phase. Defaults to Opus; opussonnet passes Sonnet. */
+  readonly model?: ModelId;
   readonly effort?: EffortLevel;
   readonly testCommand?: string;
   readonly permissionMode?: "default" | "acceptEdits" | "plan" | "bypassPermissions" | "auto";
@@ -37,7 +39,8 @@ export async function runTddCycle(
   for await (const message of query({
     prompt: `Run the TDD cycle for the SPEC. Write the failing test first, then implement, then prove the test passes. Emit the FINAL TDD BLOCK at the end.`,
     options: {
-      model: MODELS.opus.id,
+      model: opts.model ?? MODELS.opus.id,
+      fallbackModel: (opts.model ?? MODELS.opus.id) === MODELS.sonnet.id ? MODELS.opus.id : MODELS.sonnet.id,
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
