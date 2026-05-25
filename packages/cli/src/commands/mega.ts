@@ -17,6 +17,7 @@ import {
   scaffoldFeatures,
   defaultFeaturesPath,
   type ResumableState,
+  isSaturationSignal,
 } from "@claudemax/runtime";
 import { slugifyGoal } from "@claudemax/runtime";
 
@@ -194,15 +195,9 @@ export async function driveLanes(
 
       const checkSaturation = (chunk: string, stream: string): void => {
         if (saturationPause) return;
-        // Three observed Anthropic throttle signals (all should pause-not-fail):
-        // (1) burst protection: "temporarily limiting requests (not your usage limit)"
-        // (2) Max subscription pool: "You've hit your session limit · resets <Xpm>"
-        // (3) generic: rate-limit / 429 / exceeded / saturation / usage limit
-        if (
-          /session limit|temporarily limiting requests|rate.?limit|429|exceeded|saturation|usage limit|resets \d+\s*[ap]m/i.test(
-            chunk.slice(-2000),
-          )
-        ) {
+        // Shared detector (scheduler.isSaturationSignal): the three observed
+        // Anthropic throttle signals, all pause-not-fail. See its doc comment.
+        if (isSaturationSignal(chunk.slice(-2000))) {
           saturationPause = true;
           pauseReason = `rate-limit-shaped ${stream} signal`;
         }

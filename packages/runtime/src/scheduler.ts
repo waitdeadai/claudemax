@@ -228,6 +228,19 @@ export function withSafetyMargin(reset: Date, safetySeconds = 30): Date {
   return new Date(reset.getTime() + safetySeconds * 1000);
 }
 
+// The three observed Anthropic throttle signals — callers should treat these as
+// pause-and-resume, NOT a logic failure. Single source of truth shared by the
+// mega lane dispatcher and the run-pipeline interrupt handler:
+//   (1) burst protection: "temporarily limiting requests (not your usage limit)"
+//   (2) Max subscription pool: "You've hit your session limit · resets <Xpm>"
+//   (3) generic: rate-limit / 429 / exceeded / saturation / usage limit
+const SATURATION_RE =
+  /session limit|temporarily limiting requests|rate.?limit|429|exceeded|saturation|usage limit|resets \d+\s*[ap]m/i;
+
+export function isSaturationSignal(text: string): boolean {
+  return SATURATION_RE.test(text);
+}
+
 // ---- Dry-fire validation (root cause 3 fix) --------------------------------
 
 // Validate that `command` can execute under the EXACT minimal env the

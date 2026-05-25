@@ -11,11 +11,14 @@ import {
   decomposeIntoMultiSpec,
   runTddCycle,
   writeHandoff,
+  isSaturationSignal,
+  parseResetTime,
 } from "@claudemax/runtime";
 import { MemoryStore } from "@claudemax/memory";
 
 type Variant = "opussonnet" | "opusolo";
 type Mode = "auto" | "solo" | "teams";
+type Phase = "deepresearch" | "decompose" | "goal" | "verify";
 
 export function runCommand(): Command {
   return new Command("run")
@@ -63,71 +66,94 @@ export function runCommand(): Command {
           ),
         );
 
-        let brief;
-        if (opts.research) {
-          console.log(kleur.cyan("→ phase 1/5  /deepresearch"));
-          brief = await deepResearch(goal, { cwd });
-          for (const s of brief.sources.slice(0, 5)) {
-            memory.recordResearchSource({
-              topic: brief.topic,
-              url: s.url,
-              title: s.title,
-              publishedAt: s.publishedAt,
-              relevance: s.relevance,
-              excerpt: s.excerpt,
+        // Track the phase so a mid-run interrupt (Anthropic session/rate limit)
+        // can tell the user where it stopped and how to recover without a rebuild.
+        let phase: Phase = "decompose";
+        try {
+          let brief;
+          if (opts.research) {
+            phase = "deepresearch";
+            console.log(kleur.cyan("→ phase 1/5  /deepresearch"));
+            brief = await deepResearch(goal, { cwd });
+            for (const s of brief.sources.slice(0, 5)) {
+              memory.recordResearchSource({
+                topic: brief.topic,
+                url: s.url,
+                title: s.title,
+                publishedAt: s.publishedAt,
+                relevance: s.relevance,
+                excerpt: s.excerpt,
+              });
+            }
+            console.log(kleur.green(`  ✓ ${brief.sources.length} sources, ${brief.keyFindings.length} key findings`));
+            writeHandoff({
+              cwd,
+              rootGoal: goal,
+              phase: "deepresearch",
+              summary: `${brief.sources.length} sources, ${brief.keyFindings.length} key findings on "${brief.topic}"`,
+              nextInputs: [`research brief in memory`, ...brief.keyFindings.slice(0, 5).map((f) => f.finding)],
+              artifacts: { sourceCount: String(brief.sources.length), topic: brief.topic },
             });
           }
-          console.log(kleur.green(`  ✓ ${brief.sources.length} sources, ${brief.keyFindings.length} key findings`));
+
+          phase = "decompose";
+          console.log(kleur.cyan("→ phase 2/5  multispec decompose"));
+          const multispec = await decomposeIntoMultiSpec(goal, { cwd, researchBrief: brief });
+          const specPath = resolve(cwd, opts.out);
+          const rootSpec: Spec = {
+            title: multispec.rootGoal,
+            goal: multispec.rootGoal,
+            nonGoals: [],
+            constraints: [],
+            completionConditions: multispec.rollupCompletionConditions,
+            assumptions: [],
+            evidenceRequired: [],
+            createdAt: multispec.createdAt,
+          };
+          writeFileSync(specPath, renderSpecMarkdown(rootSpec), "utf8");
+          console.log(
+            kleur.green(
+              `  ✓ ${multispec.subSpecs.length} sub-Specs, mode=${multispec.mode} (${multispec.modeReason})`,
+            ),
+          );
           writeHandoff({
             cwd,
             rootGoal: goal,
-            phase: "deepresearch",
-            summary: `${brief.sources.length} sources, ${brief.keyFindings.length} key findings on "${brief.topic}"`,
-            nextInputs: [`research brief in memory`, ...brief.keyFindings.slice(0, 5).map((f) => f.finding)],
-            artifacts: { sourceCount: String(brief.sources.length), topic: brief.topic },
+            phase: "decompose",
+            previousPhase: opts.research ? "deepresearch" : undefined,
+            summary: `${multispec.subSpecs.length} sub-Specs, mode=${multispec.mode}: ${multispec.modeReason}`,
+            nextInputs: multispec.subSpecs.map((s) => s.title),
+            artifacts: { rootSpecPath: specPath, mode: multispec.mode },
           });
-        }
 
-        console.log(kleur.cyan("→ phase 2/5  multispec decompose"));
-        const multispec = await decomposeIntoMultiSpec(goal, { cwd, researchBrief: brief });
-        const specPath = resolve(cwd, opts.out);
-        const rootSpec: Spec = {
-          title: multispec.rootGoal,
-          goal: multispec.rootGoal,
-          nonGoals: [],
-          constraints: [],
-          completionConditions: multispec.rollupCompletionConditions,
-          assumptions: [],
-          evidenceRequired: [],
-          createdAt: multispec.createdAt,
-        };
-        writeFileSync(specPath, renderSpecMarkdown(rootSpec), "utf8");
-        console.log(
-          kleur.green(
-            `  ✓ ${multispec.subSpecs.length} sub-Specs, mode=${multispec.mode} (${multispec.modeReason})`,
-          ),
-        );
-        writeHandoff({
-          cwd,
-          rootGoal: goal,
-          phase: "decompose",
-          previousPhase: opts.research ? "deepresearch" : undefined,
-          summary: `${multispec.subSpecs.length} sub-Specs, mode=${multispec.mode}: ${multispec.modeReason}`,
-          nextInputs: multispec.subSpecs.map((s) => s.title),
-          artifacts: { rootSpecPath: specPath, mode: multispec.mode },
-        });
-
-        console.log(
-          kleur.cyan(
-            `→ phase 3/5  parallel ${opts.tdd ? "TDD-cycle" : "/goal"} per sub-Spec`,
-          ),
-        );
-        const subResults: Array<{ id: string; status: string; turns: number }> = [];
-        await Promise.all(
-          multispec.subSpecs.map(async (sub) => {
-            const id = slugify(sub.title);
-            if (opts.tdd && hasTestVerifyHint(sub)) {
-              const t = await runTddCycle(sub, {
+          phase = "goal";
+          console.log(
+            kleur.cyan(
+              `→ phase 3/5  parallel ${opts.tdd ? "TDD-cycle" : "/goal"} per sub-Spec`,
+            ),
+          );
+          const subResults: Array<{ id: string; status: string; turns: number }> = [];
+          await Promise.all(
+            multispec.subSpecs.map(async (sub) => {
+              const id = slugify(sub.title);
+              if (opts.tdd && hasTestVerifyHint(sub)) {
+                const t = await runTddCycle(sub, {
+                  cwd,
+                  maxTurns: Number(opts.maxTurns),
+                  permissionMode: opts.permission as
+                    | "default"
+                    | "acceptEdits"
+                    | "plan"
+                    | "bypassPermissions"
+                    | "auto",
+                });
+                const status = t.phase === "test-passes" ? "finished" : t.phase === "stalled" ? "blocked" : "partial";
+                subResults.push({ id, status, turns: t.turnsUsed });
+                const colored = status === "finished" ? kleur.green : status === "blocked" ? kleur.yellow : kleur.yellow;
+                console.log(colored(`  tdd:${t.phase}  ${id}  ${t.turnsUsed} turns`));
+                return;
+              }
+              const r = await runGoal(sub, {
                 cwd,
                 maxTurns: Number(opts.maxTurns),
                 permissionMode: opts.permission as
@@ -137,116 +163,152 @@ export function runCommand(): Command {
                   | "bypassPermissions"
                   | "auto",
               });
-              const status = t.phase === "test-passes" ? "finished" : t.phase === "stalled" ? "blocked" : "partial";
-              subResults.push({ id, status, turns: t.turnsUsed });
-              const colored = status === "finished" ? kleur.green : status === "blocked" ? kleur.yellow : kleur.yellow;
-              console.log(colored(`  tdd:${t.phase}  ${id}  ${t.turnsUsed} turns`));
-              return;
-            }
-            const r = await runGoal(sub, {
-              cwd,
-              maxTurns: Number(opts.maxTurns),
-              permissionMode: opts.permission as
-                | "default"
-                | "acceptEdits"
-                | "plan"
-                | "bypassPermissions"
-                | "auto",
-            });
-            subResults.push({ id, status: r.status, turns: r.turns });
-            console.log(
-              (r.status === "finished" ? kleur.green : kleur.yellow)(
-                `  ${r.status === "finished" ? "ok    " : "block "} ${id}  ${r.turns} turns`,
-              ),
-            );
-          }),
-        );
-        writeHandoff({
-          cwd,
-          rootGoal: goal,
-          phase: "goal",
-          previousPhase: "decompose",
-          summary: `${subResults.filter((s) => s.status === "finished").length}/${subResults.length} sub-Specs finished; ${opts.tdd ? "TDD cycle" : "plain /goal"}`,
-          nextInputs: subResults.map((r) => `${r.id}=${r.status}`),
-          blockers: subResults.filter((r) => r.status !== "finished").map((r) => r.id),
-          artifacts: Object.fromEntries(subResults.map((r) => [r.id, r.status])),
-        });
-
-        let rollupVerdict: "verified" | "partial" | "failed" | "unverified" | "skipped" = "skipped";
-        if (opts.verify) {
-          console.log(kleur.cyan("→ phase 4/5  per-sub-Spec /verify (parallel, blind Opus)"));
-          const verifications = await Promise.all(
-            multispec.subSpecs.map((s) => verify(s, { cwd, confidenceThreshold })),
-          );
-          for (const v of verifications) {
-            const c = v.verdict === "verified" ? kleur.green : v.verdict === "partial" ? kleur.yellow : kleur.red;
-            const suppressed = v.suppressedLowConfidence.length
-              ? kleur.dim(` (${v.suppressedLowConfidence.length} suppressed <${v.confidenceThreshold})`)
-              : "";
-            console.log(c(`  ${v.verdict}  ${v.spec.title}${suppressed}`));
-            for (const f of v.perCondition.filter((x) => !x.met).slice(0, 3)) {
+              subResults.push({ id, status: r.status, turns: r.turns });
               console.log(
-                kleur.dim(
-                  `    ↳ ${f.id} [${f.failureCategory ?? "?"}] next: ${f.actionableNext ?? "—"}`,
+                (r.status === "finished" ? kleur.green : kleur.yellow)(
+                  `  ${r.status === "finished" ? "ok    " : "block "} ${id}  ${r.turns} turns`,
                 ),
               );
+            }),
+          );
+          writeHandoff({
+            cwd,
+            rootGoal: goal,
+            phase: "goal",
+            previousPhase: "decompose",
+            summary: `${subResults.filter((s) => s.status === "finished").length}/${subResults.length} sub-Specs finished; ${opts.tdd ? "TDD cycle" : "plain /goal"}`,
+            nextInputs: subResults.map((r) => `${r.id}=${r.status}`),
+            blockers: subResults.filter((r) => r.status !== "finished").map((r) => r.id),
+            artifacts: Object.fromEntries(subResults.map((r) => [r.id, r.status])),
+          });
+
+          let rollupVerdict: "verified" | "partial" | "failed" | "unverified" | "skipped" = "skipped";
+          if (opts.verify) {
+            phase = "verify";
+            console.log(kleur.cyan("→ phase 4/5  per-sub-Spec /verify (parallel, blind Opus)"));
+            const verifications = await Promise.all(
+              multispec.subSpecs.map((s) => verify(s, { cwd, confidenceThreshold })),
+            );
+            for (const v of verifications) {
+              const c = v.verdict === "verified" ? kleur.green : v.verdict === "partial" ? kleur.yellow : kleur.red;
+              const suppressed = v.suppressedLowConfidence.length
+                ? kleur.dim(` (${v.suppressedLowConfidence.length} suppressed <${v.confidenceThreshold})`)
+                : "";
+              console.log(c(`  ${v.verdict}  ${v.spec.title}${suppressed}`));
+              for (const f of v.perCondition.filter((x) => !x.met).slice(0, 3)) {
+                console.log(
+                  kleur.dim(
+                    `    ↳ ${f.id} [${f.failureCategory ?? "?"}] next: ${f.actionableNext ?? "—"}`,
+                  ),
+                );
+              }
             }
+            writeHandoff({
+              cwd,
+              rootGoal: goal,
+              phase: "verify-per-spec",
+              previousPhase: "goal",
+              summary: verifications
+                .map((v) => `${v.spec.title}=${v.verdict}`)
+                .join("; "),
+              nextInputs: ["rollup verifier should integrate per-sub-Spec verdicts"],
+              blockers: verifications.filter((v) => v.verdict !== "verified").map((v) => v.spec.title),
+            });
+
+            console.log(kleur.cyan("→ phase 5/5  rollup /verify"));
+            const rollup = await verify(rootSpec, { cwd, confidenceThreshold });
+            rollupVerdict = rollup.verdict;
+            const c = rollup.verdict === "verified" ? kleur.green : rollup.verdict === "partial" ? kleur.yellow : kleur.red;
+            console.log(c(`  rollup: ${rollup.verdict}`));
+            writeHandoff({
+              cwd,
+              rootGoal: goal,
+              phase: "verify-rollup",
+              previousPhase: "verify-per-spec",
+              summary: `rollup verdict=${rollup.verdict}; ${rollup.perCondition.filter((f) => f.met).length}/${rollup.perCondition.length} conditions met`,
+              nextInputs: rollup.perCondition.filter((f) => !f.met).map((f) => `${f.id}: ${f.actionableNext ?? "no actionable next"}`),
+              blockers: rollup.perCondition.filter((f) => !f.met).map((f) => f.id),
+            });
           }
-          writeHandoff({
-            cwd,
-            rootGoal: goal,
-            phase: "verify-per-spec",
-            previousPhase: "goal",
-            summary: verifications
-              .map((v) => `${v.spec.title}=${v.verdict}`)
-              .join("; "),
-            nextInputs: ["rollup verifier should integrate per-sub-Spec verdicts"],
-            blockers: verifications.filter((v) => v.verdict !== "verified").map((v) => v.spec.title),
-          });
 
-          console.log(kleur.cyan("→ phase 5/5  rollup /verify"));
-          const rollup = await verify(rootSpec, { cwd, confidenceThreshold });
-          rollupVerdict = rollup.verdict;
-          const c = rollup.verdict === "verified" ? kleur.green : rollup.verdict === "partial" ? kleur.yellow : kleur.red;
-          console.log(c(`  rollup: ${rollup.verdict}`));
-          writeHandoff({
-            cwd,
-            rootGoal: goal,
-            phase: "verify-rollup",
-            previousPhase: "verify-per-spec",
-            summary: `rollup verdict=${rollup.verdict}; ${rollup.perCondition.filter((f) => f.met).length}/${rollup.perCondition.length} conditions met`,
-            nextInputs: rollup.perCondition.filter((f) => !f.met).map((f) => `${f.id}: ${f.actionableNext ?? "no actionable next"}`),
-            blockers: rollup.perCondition.filter((f) => !f.met).map((f) => f.id),
+          const finalStatus =
+            rollupVerdict === "verified"
+              ? "finished"
+              : rollupVerdict === "partial"
+                ? "partial"
+                : rollupVerdict === "failed"
+                  ? "failed"
+                  : subResults.every((r) => r.status === "finished")
+                    ? "finished"
+                    : "partial";
+
+          memory.recordRun({
+            specTitle: multispec.rootGoal.slice(0, 80),
+            goal: multispec.rootGoal,
+            status: finalStatus,
+            costUsd: 0,
+            tokensIn: 0,
+            tokensOut: 0,
+            durationMs: Date.now() - started,
+            plan: plan.plan,
+            mode: multispec.mode,
+            evidence: { rollupVerdict, subResults },
           });
+          memory.close();
+
+          console.log(kleur.bold(`\n${finalStatus === "finished" ? "✓" : "✗"} ${finalStatus}`));
+          process.exit(finalStatus === "finished" ? 0 : 1);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          // An Anthropic session/rate limit is a pause, not a logic failure: the
+          // sub-Spec work that completed before the interrupt is already on disk.
+          // Surface that legibly with a recovery command instead of a bare error.
+          if (isSaturationSignal(msg)) {
+            const reset = parseResetTime(msg);
+            const buildLanded = phase === "goal" || phase === "verify";
+            try {
+              memory.recordRun({
+                specTitle: goal.slice(0, 80),
+                goal,
+                status: "blocked",
+                costUsd: 0,
+                tokensIn: 0,
+                tokensOut: 0,
+                durationMs: Date.now() - started,
+                plan: plan.plan,
+                mode: opts.mode,
+                evidence: { interrupted: true, phase, signal: "saturation", resetsAt: reset?.toISOString() ?? null },
+              });
+            } catch {
+              /* memory write is best-effort during an interrupt */
+            }
+            memory.close();
+            console.error(
+              "\n" +
+                kleur.yellow("⚠ interrupted by an Anthropic session/rate limit") +
+                kleur.dim(` (at phase: ${phase}) — NOT a logic failure.`),
+            );
+            if (reset) console.error(kleur.dim(`  pool resets ~${reset.toLocaleString()}`));
+            if (buildLanded) {
+              console.error(
+                kleur.dim("  Completed sub-Spec work is on disk. After the reset, recover WITHOUT a rebuild:\n") +
+                  "    " +
+                  kleur.cyan("cmax verify") +
+                  kleur.dim("   (runs only the blind Opus verify against SPEC.md)\n") +
+                  kleur.dim("  Then run your local gate (typecheck / test / lint) and commit what is green."),
+              );
+            } else {
+              console.error(
+                kleur.dim("  Decompose had not completed — little/no work on disk. Re-run after the reset:\n") +
+                  "    " +
+                  kleur.cyan('cmax ask "<your goal>"'),
+              );
+            }
+            process.exit(3);
+          }
+          memory.close();
+          throw err;
         }
-
-        const finalStatus =
-          rollupVerdict === "verified"
-            ? "finished"
-            : rollupVerdict === "partial"
-              ? "partial"
-              : rollupVerdict === "failed"
-                ? "failed"
-                : subResults.every((r) => r.status === "finished")
-                  ? "finished"
-                  : "partial";
-
-        memory.recordRun({
-          specTitle: multispec.rootGoal.slice(0, 80),
-          goal: multispec.rootGoal,
-          status: finalStatus,
-          costUsd: 0,
-          tokensIn: 0,
-          tokensOut: 0,
-          durationMs: Date.now() - started,
-          plan: plan.plan,
-          mode: multispec.mode,
-          evidence: { rollupVerdict, subResults },
-        });
-        memory.close();
-
-        console.log(kleur.bold(`\n${finalStatus === "finished" ? "✓" : "✗"} ${finalStatus}`));
-        process.exit(finalStatus === "finished" ? 0 : 1);
       },
     );
 }
