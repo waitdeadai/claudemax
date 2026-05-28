@@ -78,9 +78,9 @@ Clones to `$env:USERPROFILE\.claudemax`, builds, writes `cmax.cmd` + `claudemax.
 | default | value | why |
 |---|---|---|
 | `permissionMode` | `bypassPermissions` | equivalent to Claude Code's `--dangerously-skip-permissions`; goal-loop / TDD / multispec all run autonomously without per-edit prompts. Override per-invocation with `--permission default` if you want approval prompts back. |
-| `effort` | `xhigh` | Anthropic's recommended max-effort tier for Opus 4.7 |
-| plan / judge / verify | Opus 4.7 | never demoted, regardless of credit % or `--cheap` |
-| sub-Spec exec | Sonnet 4.6 | router can escalate to Opus per task on novelty / security / complexity ≥ 7 |
+| `effort` | `xhigh` | Anthropic's recommended tier for agentic/coding work on Opus 4.8 — above the `high` default; `max` is opt-in only (`--effort max`) |
+| plan / judge / verify | Opus 4.8 | never demoted, regardless of credit % or `--cheap` |
+| sub-Spec exec | Opus 4.8 (pre-split) / Sonnet 4.6 (post-split) | era-aware: shares one pool until 2026-06-15 so opussonnet executes on Opus 4.8; reverts to Sonnet post-split. `--variant opusolo` forces Opus always; router still escalates per task on novelty / security / complexity ≥ 7 |
 
 ### Remote-from-phone install (one command, full ceremony)
 

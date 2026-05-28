@@ -60,9 +60,9 @@ Identical thresholds for Max 5x and Max 20x; only the absolute dollar numbers di
 
 | Tier | Input/1M | Cached input/1M | Output/1M |
 |---|---|---|---|
-| Opus | $15 | $1.50 | $75 |
-| Sonnet | $3 | $0.30 | $15 |
-| Haiku | $1 | $0.10 | $5 |
+| Opus (4.8) | $5 | $0.50 | $25 |
+| Sonnet (4.6) | $3 | $0.30 | $15 |
+| Haiku (4.5) | $1 | $0.10 | $5 |
 
 ## Per-packet cost estimate
 

@@ -4,6 +4,31 @@ All notable changes to claudemax. Format loosely follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Changed — 2026-05-28 Opus 4.8 retarget (primary model + xhigh/ultracode tailoring)
+
+Opus 4.8 shipped 2026-05-28. Verified live against [Anthropic's announcement](https://www.anthropic.com/news/claude-opus-4-8), [models overview](https://platform.claude.com/docs/en/about-claude/models/overview), and the [Effort guide](https://platform.claude.com/docs/en/build-with-claude/effort) (all accessed 2026-05-28). Pricing, context (1M), max output (128k), and cache structure are **unchanged** from 4.7 — only the model id and behavior tuning move.
+
+- **Primary model `claude-opus-4-7` → `claude-opus-4-8`.** Single load-bearing pin in `packages/core/src/models.ts` (the `opus` tier id) + the `ModelId` union in `types.ts`; every runtime/CLI/skill site resolves Opus via `MODELS.opus.id`, so the whole pipeline retargets from these two literals. `.claude/settings.json` REPL pin bumped in lockstep. Opus strengths gain "honest self-review (4× fewer unflagged code flaws than 4.7)".
+- **Era-aware default executor.** `execModelForVariant(variant, era)` now takes a billing era. In the **pre-split era** (until 2026-06-15) Opus and Sonnet share one 5h subscription pool, so the cost rationale for Sonnet execution evaporates — `opussonnet` (the `/cmax`/`/ask` default) executes sub-Specs on **Opus 4.8** for maximum effectiveness (4× fewer unflagged flaws, agentic coding 64.3→69.2). **Post-split** it auto-reverts to Sonnet. `run.ts` supplies the live era via `resolveBillingEra()`. `--variant opusolo` forces Opus every era; `--cheap`/explicit Sonnet remains the cost-conscious escape hatch. plan/decompose + verify stay Opus regardless (house rule #4, untouched).
+- **`--effort {high|xhigh|max}` flag** on `cmax run`, threaded to the `runGoal` / `runTddCycle` execution lanes. Default stays **`xhigh`** — Anthropic's recommended tier for agentic/coding + long-running work, now vindicated for 4.8. **`max` is opt-in only**: measured ~3% gain over xhigh for ~2× tokens/pool burn, and it can *overthink* structured-output lanes (spec/verify), so it is never the standing default. `thinking` stays `adaptive` (4.8 rejects manual extended thinking with a 400).
+- **`spec-writer.ts` effort pinned to `xhigh`** + `thinking: adaptive`. Previously set no effort, so under 4.8 it would silently fall to the SDK `high` default on a never-demote judgment lane.
+
+### Fixed — 2026-05-28 (pre-existing pricing bugs surfaced by the 4.8 audit)
+
+- **`packages/runtime/src/overnight.ts` `estimateUsd`** hardcoded legacy `$15/$75` Opus pricing — a 3× overcount that tripped the overnight budget loop early (harmless pre-split, wrong post-split). Now reads `MODELS.opus.{inputPer1MUsd,outputPer1MUsd}` ($5/$25) from the registry so it auto-tracks the catalog.
+- **`docs/MODEL_ROUTING.md` tier-pricing table** had the same legacy `$15/$1.50/$75` Opus row — corrected to `$5/$0.50/$25`.
+
+### Changed — 2026-05-28 docs/test sweep for 4.8
+
+- Model-version prose refreshed to Opus 4.8 across `sdk-options.ts`, `orchestrator.ts`, `goal.ts`, `prompts.ts` (live worker system prompt), `plugin.json`, `README.md`, `skills/opusolo/SKILL.md`, and `docs/SOTA_2026.md` (largest cluster — re-pinned capability bullets, added an Opus-4.8 subsection covering Dynamic Workflows / fast mode / mid-task system messages / honesty gain, and resolved the stale "defaults to max" vs `xhigh` contradiction). `CLAUDE.md` billing-era date 2026-05-22 → 2026-05-28.
+- Test prose + the coupled literal in `variant-routing.test.ts` (`opusolo` → `claude-opus-4-8`) bumped; added era-aware guards (opussonnet → Opus pre-split / Sonnet post-split). `cache.test.ts` + `store-sota.test.ts` prose → 4.8 (all numeric pricing/context assertions unchanged and still green). `pnpm build && typecheck && test` green.
+
+### Deferred (flagged by the audit; need a dedicated pass, NOT auto-applied)
+
+- **Dynamic Workflows as a `Mode C`** — routed through `/cc-audit` + `/harness-audit` instead of guessing an env flag (it auto-activates with 4.8; adding a third auto-selected parallelism arm changes house rule #7's two-mode contract).
+- **Haiku verifier double-check** — kept opt-in/off-by-default; the 4.8 honesty gain weakens its original rationale, but replacing it with a second Opus pass reverses commit `5efecd4` and needs `/council` + ~30-run validation.
+- **Version bump** (0.2.2 → 0.3.0) for this retarget — pending; touches root + plugin.json + 4 workspace packages + the OTEL/doctor version-assertion tests in lockstep.
+
 ### Added — 2026-05-22 daily-effectiveness improvement run (cmax orchestrate 5-lane)
 
 - **`packages/runtime/src/agent-teams.ts` true parallel dispatch.** Mode B (Claude Code Agent Teams) sub-Specs now run in a DAG-aware bounded-parallel dispatcher instead of the sequential `for...await` loop. Independent leaves dispatch concurrently via `Promise.race(active)` over an active-set capped by `MAX_PARALLEL_AGENTS` (env) or `os.cpus().length`. Dependency chains from `multispec.dependencies` are honoured; cycle-stuck sub-Specs fail fast rather than deadlock. Closes the gap between CLAUDE.md rule #7's stated "max parallel by default" and Mode B's prior actual behaviour. `packages/runtime/tests/agent-teams.test.ts` adds N=4 parallelism smoke + DAG enforcement + maxParallel=2 cap + cycle handling, all using a `_spawnTeammate` injection to avoid spawning real `claude -p` subprocesses in CI.

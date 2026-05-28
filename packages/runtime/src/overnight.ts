@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Spec } from "@claudemax/core";
+import { MODELS, type Spec } from "@claudemax/core";
 import { runGoal, type GoalRunResult } from "./goal.js";
 
 export interface OvernightOptions {
@@ -90,8 +90,12 @@ export async function runOvernight(
   }
 }
 
+// Read Opus pricing from the registry so this auto-tracks the catalog ($5/$25 for
+// Opus 4.8) instead of the legacy $15/$75 it used to hardcode — a 3× overcount that
+// tripped the budget loop early. Conservative on cache (ignores the read discount).
 function estimateUsd(tokensIn: number, tokensOut: number): number {
-  return (tokensIn / 1_000_000) * 15 + (tokensOut / 1_000_000) * 75;
+  const m = MODELS.opus;
+  return (tokensIn / 1_000_000) * m.inputPer1MUsd + (tokensOut / 1_000_000) * m.outputPer1MUsd;
 }
 
 function slug(title: string): string {

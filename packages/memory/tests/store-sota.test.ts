@@ -23,7 +23,7 @@ describe("MemoryStore SOTA-2026 surface", () => {
     try {
       const result = store.add(
         "decision",
-        "use opus 4.7 for verification",
+        "use opus 4.8 for verification",
         "Verifier blind-reads spec at confidence 0.85; Opus catches Sonnet drift.",
         { laneId: "infra", runId: "run-1" },
       );

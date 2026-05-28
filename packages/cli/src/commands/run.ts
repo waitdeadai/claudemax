@@ -2,7 +2,13 @@ import { Command } from "commander";
 import kleur from "kleur";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { execModelForVariant, renderSpecMarkdown, type ModelId, type Spec } from "@claudemax/core";
+import {
+  execModelForVariant,
+  renderSpecMarkdown,
+  resolveBillingEra,
+  type ModelId,
+  type Spec,
+} from "@claudemax/core";
 import {
   runGoal,
   verify,
@@ -14,6 +20,7 @@ import {
   writeHandoff,
   isSaturationSignal,
   parseResetTime,
+  type EffortLevel,
 } from "@claudemax/runtime";
 import { MemoryStore } from "@claudemax/memory";
 
@@ -33,6 +40,11 @@ export function runCommand(): Command {
       "bypassPermissions",
     )
     .option("--variant <variant>", "opussonnet | opusolo", "opussonnet")
+    .option(
+      "--effort <level>",
+      "high | xhigh | max — Opus effort for execution lanes (default xhigh, the SOTA-2026 sweet spot for agentic coding; max only for frontier one-offs — it ~2× the token/pool burn for ~3% and can overthink structured output)",
+      "xhigh",
+    )
     .option("--mode <mode>", "auto | solo | teams (parallelism mode)", "auto")
     .option("--no-research", "skip /deepresearch (smaller / simpler goals)")
     .option("--no-verify", "skip independent verification step")
@@ -47,6 +59,7 @@ export function runCommand(): Command {
           maxTurns: string;
           permission: string;
           variant: Variant;
+          effort: string;
           mode: Mode;
           research: boolean;
           verify: boolean;
@@ -61,13 +74,18 @@ export function runCommand(): Command {
         const cwd = process.cwd();
         const confidenceThreshold = Number(opts.confidence);
 
-        // Variant → executor model. opusolo runs Opus everywhere; opussonnet routes
-        // sub-Spec execution to Sonnet (plan/decompose + verify always stay Opus — rule #4).
-        const execModel: ModelId = execModelForVariant(opts.variant);
+        // Variant → executor model, era-aware. opusolo runs Opus everywhere. In the
+        // PRE-SPLIT era (until 2026-06-15) opussonnet also executes sub-Specs on Opus
+        // 4.8 — the shared 5h pool makes Opus cost the same as Sonnet, so we take the
+        // higher ceiling (4× fewer unflagged flaws). Post-split it reverts to Sonnet.
+        // plan/decompose + verify always stay Opus regardless of variant/era (rule #4).
+        const era = resolveBillingEra();
+        const execModel: ModelId = execModelForVariant(opts.variant, era);
+        const effort = normalizeEffort(opts.effort);
 
         console.log(
           kleur.dim(
-            `plan=${plan.plan} billing=${plan.billing} credit=${plan.monthlyCreditUsd ?? "n/a"}/mo variant=${opts.variant} exec=${execModel} mode=${opts.mode} tdd=${opts.tdd ? "on" : "off"} conf>=${confidenceThreshold}`,
+            `plan=${plan.plan} billing=${plan.billing} era=${era} credit=${plan.monthlyCreditUsd ?? "n/a"}/mo variant=${opts.variant} exec=${execModel} effort=${effort} mode=${opts.mode} tdd=${opts.tdd ? "on" : "off"} conf>=${confidenceThreshold}`,
           ),
         );
 
@@ -172,6 +190,7 @@ export function runCommand(): Command {
                   const t = await runTddCycle(sub, {
                     cwd,
                     model: execModel,
+                    effort,
                     maxTurns: Number(opts.maxTurns),
                     permissionMode,
                   });
@@ -184,6 +203,7 @@ export function runCommand(): Command {
                 const r = await runGoal(sub, {
                   cwd,
                   model: execModel,
+                  effort,
                   maxTurns: Number(opts.maxTurns),
                   permissionMode,
                 });
@@ -340,6 +360,14 @@ export function runCommand(): Command {
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+// Opus 4.8 effort for execution lanes. We expose only the meaningful upper range
+// (high|xhigh|max); xhigh is the default and the SOTA-2026 sweet spot. Anything
+// else (typo, low/medium) falls back to xhigh — use --variant opussonnet for the
+// cost-conscious path, not a lower effort.
+function normalizeEffort(v: string): EffortLevel {
+  return v === "high" || v === "xhigh" || v === "max" ? v : "xhigh";
 }
 
 const TEST_RE = /\b(?:test|spec|vitest|jest|pytest|cargo test|go test|pnpm test|npm test|yarn test)\b/i;

@@ -18,7 +18,7 @@
       "WebFetch"
     ]
   },
-  "model": "claude-opus-4-7",
+  "model": "claude-opus-4-8",
   "env": {
     "CLAUDEMAX_REPO": "true",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "true"

@@ -1,7 +1,7 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { MODELS, parseSpec, type Spec } from "@claudemax/core";
 import { SPEC_WRITER_SYSTEM } from "./prompts.js";
-import { extractStructuredOutput } from "./sdk-options.js";
+import { DEFAULT_EFFORT, extractStructuredOutput } from "./sdk-options.js";
 
 export interface SpecWriteOptions {
   readonly cwd?: string;
@@ -65,6 +65,12 @@ export async function writeSpec(goal: string, opts: SpecWriteOptions = {}): Prom
     prompt: userMsg,
     options: {
       model: MODELS.opus.id,
+      // Spec is a never-demote Opus lane (rule #4). Pin xhigh explicitly — under
+      // Opus 4.8 an unset effort falls to the SDK "high" default, and xhigh is the
+      // recommended tier for this judgment work. NOT max: spec authoring emits
+      // structured JSON, where Anthropic warns max can overthink.
+      effort: DEFAULT_EFFORT,
+      thinking: { type: "adaptive" },
       systemPrompt: {
         type: "preset",
         preset: "claude_code",

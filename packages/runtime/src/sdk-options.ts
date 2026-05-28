@@ -1,16 +1,19 @@
 // Centralized SDK option builders for claudemax runtime.
 // Keeps every query() call site consistent with the May 2026 Claude Agent SDK
-// surface and the Opus 4.7 behavior changes.
+// surface and the Opus 4.8 behavior (effort ladder + adaptive thinking).
 
 import type { ModelTier } from "@claudemax/core";
 import { MODELS } from "@claudemax/core";
 
 export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
-// Anthropic recommends "xhigh" as the default for Opus 4.7 coding/agentic work
-// (https://platform.claude.com/docs/en/about-claude/models/whats-new-claude-4-7).
-// Users can override to "max" for more tokens at lower cost-effectiveness, or
-// down-tier for cheaper/faster.
+// Opus 4.8 defaults effort to "high" on every surface (API + Claude Code), but
+// Anthropic explicitly recommends "xhigh" as the starting point for coding and
+// long-running agentic work — exactly claudemax's workload
+// (https://platform.claude.com/docs/en/build-with-claude/effort, accessed 2026-05-28).
+// "max" is reserve-only: ~2× the tokens/pool burn for ~3% on most workloads, and it
+// can overthink structured-output tasks — so it stays opt-in (--effort max), never
+// the standing default.
 export const DEFAULT_EFFORT: EffortLevel = "xhigh";
 
 export const TASK_BUDGET_BETA = "task-budgets-2026-03-13";

@@ -12,7 +12,7 @@ Identical pipeline to /opussonnet, but Opus executes the sub-Spec /goal loops in
 1. /deepresearch (Opus synthesis)
 2. multispec decompose (Opus authors)
 3. /specqa + /introspect gates (Opus)
-4. parallel /goal per DAG leaf — **Opus 4.7 executes**
+4. parallel /goal per DAG leaf — **Opus 4.8 executes**
 5. per-sub-Spec /verify (Opus, blind)
 6. rollup /verify (Opus, blind)
 7. memory record

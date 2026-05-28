@@ -104,7 +104,7 @@ async function runPacket(
     env: opts.env,
     maxTurns: decision.maxTurns,
     effort: opts.effort,
-    // Opus 4.7 ships "fewer subagents spawned by default"; nudge adaptive thinking
+    // Opus 4.8 ships "fewer subagents spawned by default"; nudge adaptive thinking
     // for routes that escalate to opus so the model reasons before calling tools.
     thinking: decision.tier === "opus" ? "adaptive" : undefined,
   });

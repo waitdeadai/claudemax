@@ -55,7 +55,7 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
     env: opts.env,
     maxTurns,
     effort: opts.effort,
-    thinking: "adaptive", // Opus 4.7: adaptive thinking is off by default; we opt in for goal-loop reasoning
+    thinking: "adaptive", // Opus 4.8: adaptive thinking is off unless opted in; we opt in for goal-loop reasoning (extended thinking is unsupported on 4.8)
     maxBudgetUsd: opts.maxBudgetUsd,
     taskBudgetTokens:
       opts.maxBudgetUsd !== undefined

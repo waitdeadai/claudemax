@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { execModelForVariant, MODELS, type MultiSpec, type Spec } from "@claudemax/core";
 import { runAgentTeams, type SpawnTeammateOptions } from "../src/agent-teams.js";
 
-// Regression guard for the opussonnet/opusolo model-routing fix (2026-05-25).
-// Before this, --variant was cosmetic: sub-Spec execution was hardcoded to Opus
-// regardless of variant. These tests pin the routing decision + the teams-mode
-// model threading so it cannot silently regress again.
+// Regression guard for the opussonnet/opusolo model-routing fix (2026-05-25) plus
+// the era-aware executor flip (2026-05-28, Opus 4.8). Before the first fix --variant
+// was cosmetic (exec hardcoded to Opus). The default-era (post-split) contract is
+// opussonnet→Sonnet / opusolo→Opus; in the pre-split era opussonnet executes on Opus
+// 4.8 (shared pool ⇒ same cost, higher ceiling). These tests pin both the contract
+// and the era-aware flip + the teams-mode model threading.
 
 const makeSpec = (title: string): Spec => ({
   title,
@@ -26,11 +28,19 @@ describe("execModelForVariant — the routing decision", () => {
 
   it("opusolo routes sub-Spec execution to Opus", () => {
     expect(execModelForVariant("opusolo")).toBe(MODELS.opus.id);
-    expect(execModelForVariant("opusolo")).toBe("claude-opus-4-7");
+    expect(execModelForVariant("opusolo")).toBe("claude-opus-4-8");
   });
 
-  it("the two variants resolve to different models (not cosmetic)", () => {
+  it("the two variants resolve to different models in the default (post-split) era", () => {
     expect(execModelForVariant("opussonnet")).not.toBe(execModelForVariant("opusolo"));
+  });
+
+  it("is era-aware: opussonnet executes on Opus 4.8 pre-split, Sonnet post-split", () => {
+    expect(execModelForVariant("opussonnet", "pre-split")).toBe(MODELS.opus.id);
+    expect(execModelForVariant("opussonnet", "post-split")).toBe(MODELS.sonnet.id);
+    // opusolo is Opus in every era
+    expect(execModelForVariant("opusolo", "pre-split")).toBe(MODELS.opus.id);
+    expect(execModelForVariant("opusolo", "post-split")).toBe(MODELS.opus.id);
   });
 });
 

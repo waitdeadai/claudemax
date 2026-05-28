@@ -5,8 +5,8 @@ import {
   estimateCostUsd,
 } from "../src/index.js";
 
-describe("pricing — verified 2026-05-20 against platform.claude.com", () => {
-  it("Opus 4.7 is $5 input / $25 output per MTok (NOT the old $15/$75 Opus 4.5 era)", () => {
+describe("pricing — verified 2026-05-28 against platform.claude.com", () => {
+  it("Opus 4.8 is $5 input / $25 output per MTok (unchanged from 4.7; NOT the old $15/$75 Opus 4.5 era)", () => {
     expect(MODELS.opus.inputPer1MUsd).toBe(5);
     expect(MODELS.opus.outputPer1MUsd).toBe(25);
   });
@@ -30,7 +30,7 @@ describe("pricing — verified 2026-05-20 against platform.claude.com", () => {
     }
   });
 
-  it("Opus 4.7 has 1M context window + 128k max output", () => {
+  it("Opus 4.8 has 1M context window + 128k max output", () => {
     expect(MODELS.opus.contextWindow).toBe(1_000_000);
     expect(MODELS.opus.maxOutput).toBe(128_000);
   });

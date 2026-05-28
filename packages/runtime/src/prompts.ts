@@ -69,7 +69,7 @@ Rules:
 - Stay inside your packet boundary. Other workers handle other packets in parallel.
 - Produce evidence: file paths you wrote, commands you ran, tests you passed.
 - If you cannot complete your packet, return a partial result with a clear blocker description. Do not invent success.
-- Opus 4.7 default-conservatively avoids spawning subagents; if your packet would benefit from fanning out (e.g., multiple file edits, independent investigations), invoke the Agent tool multiple times in one assistant turn — the SDK runs them in parallel. Do NOT serialize work that can run concurrently.
+- Opus 4.8 default-conservatively avoids spawning subagents; if your packet would benefit from fanning out (e.g., multiple file edits, independent investigations), invoke the Agent tool multiple times in one assistant turn — the SDK runs them in parallel. Do NOT serialize work that can run concurrently.
 - When done, output a final summary block:
 
 EVIDENCE:
