@@ -4,6 +4,14 @@ All notable changes to claudemax. Format loosely follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Removed — 2026-05-28 Trim vestigial alias skills (de-collide with the native Workflow tool)
+
+Claude Code shipped a native **Workflow tool** ("dynamic workflows" — opt-in deterministic multi-subagent orchestration, public research preview 2026-05-28, CLI v2.1.154+, triggered by the word "workflow"). Our `/workflow` umbrella *skill* — a self-described "ALIAS for /cmax, kept only for v1 muscle memory" — collided with it head-on. Deepresearch + an empirical probe (a Workflow-tool subagent's `rm -rf` was blocked by our `no-vibes` PreToolUse hook, exit 2) confirmed the **hook-event** steering layer carries into native workflows, while the cmax CLI/skill pipeline does not auto-engage in a raw workflow — so the right move is to lean the catalog, not duplicate native capability.
+
+- **Removed skills:** `skills/workflow/`, `skills/opussonnet/` (both ALIAS-for-/cmax; `/workflow` also collided with the native tool) and the deprecated `skills/dispatch/` stub (use `/parallel` or the CLI `cmax dispatch`). Catalog: 34 → **31 skill directories, all active** (no aliases, no deprecated stubs).
+- **Kept (unchanged):** the `opussonnet`/`opusolo` model-routing **variants** — they live in the CLI (`cmax run --variant {opussonnet|opusolo}`) and in `packages/core/src/models.ts` (`execModelForVariant`), not as skills. `variant-routing.test.ts` still guards them. The `cmax dispatch` CLI subcommand is also kept.
+- **Updated:** `packages/cli/src/commands/init.ts` (advertised slash list), `scripts/smoke.sh` (now asserts `init` *omits* the removed aliases — regression guard), `README.md`, `skills/README.md`, `docs/SKILL_CATALOG.md`, `docs/WORKFLOW_VARIANTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`.
+
 ### Fixed — 2026-05-28 `cmax goal --max-turns` is now a hard, pool-safe bound
 
 - **`packages/runtime/src/goal.ts`**: `runGoal` enforced the turn cap only through the SDK's `maxTurns` option, which does **not** bound a goal loop that fans out via the Agent tool — a run launched with `--max-turns 150` was observed reaching **235+ turns** (unbounded autonomous pool burn on a live build). The loop now aborts **deterministically** at our own layer: its own `AbortController` is triggered + the stream `break`s the moment the turn counter hits `maxTurns`. Adds a `queryFn` injection point and `packages/runtime/tests/goal-maxturns.test.ts` (caps exactly at 5; does not prematurely cap a short run that finishes first). 273 tests green.

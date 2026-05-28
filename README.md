@@ -44,16 +44,16 @@ Inherited from [minmaxing](https://github.com/waitdeadai/minmaxing), sharpened f
 4. **Max parallel by default.** Hardware + credit-aware cap. Two modes auto-selected: SDK subagents (Mode A) for ≤5 sub-Specs / short runs, Claude Code Agent Teams (Mode B) for big multi-day swarms with shared task list + worktree isolation.
 5. **Independent verification.** Blind Opus session re-reads the repo and re-checks every completion condition. The verifier did not do the implementation — that's the point.
 
-## Daily-driver umbrellas (4)
+## Daily-driver umbrellas (2)
 
-All four auto-run the full pipeline. They differ only in sub-Spec /goal exec tier:
+Both auto-run the full pipeline. They differ only in sub-Spec /goal exec tier (also selectable via `cmax run --variant {opussonnet|opusolo}`):
 
 | Umbrella | Plan/judge | Sub-Spec /goal exec | Verify | When |
 |---|---|---|---|---|
-| `/cmax` | Opus | **Sonnet** | Opus | Default |
-| `/workflow` | Opus | Sonnet | Opus | v1 muscle memory alias |
-| `/opussonnet` | Opus | Sonnet | Opus | v1 muscle memory; same as /cmax |
+| `/cmax` | Opus | **Sonnet** | Opus | Default (`/ask` is the friendly-verb entry to the same engine) |
 | `/opusolo` | Opus | **Opus** | Opus | Max effectiveness; auth/payments/novel-domain |
+
+> The v1 muscle-memory aliases `/workflow` and `/opussonnet` were removed 2026-05-28 (`/workflow` collided with Claude Code's native **Workflow tool**; both were identical to `/cmax`). Use `/cmax` or `/ask`. The `opussonnet`/`opusolo` model-routing **variants** remain via `cmax run --variant`.
 
 ## Install
 

@@ -124,8 +124,11 @@ $CMAX init --target "$TMP/proj3" --no-dark-patterns >/dev/null 2>&1
 if [ -f "$TMP/proj3/.claude/skills/cmax/SKILL.md" ]; then ok "init writes /cmax skill"
 else fail "init writes /cmax skill" "missing"
 fi
-if [ -f "$TMP/proj3/.claude/skills/opussonnet/SKILL.md" ]; then ok "init writes /opussonnet skill"
-else fail "init writes /opussonnet skill" "missing"
+if [ ! -e "$TMP/proj3/.claude/skills/opussonnet" ]; then ok "init omits removed /opussonnet alias"
+else fail "init omits /opussonnet alias" "alias skill still shipped"
+fi
+if [ ! -e "$TMP/proj3/.claude/skills/workflow" ]; then ok "init omits removed /workflow alias"
+else fail "init omits /workflow alias" "alias skill still shipped"
 fi
 if [ -f "$TMP/proj3/.claude/skills/opusolo/SKILL.md" ]; then ok "init writes /opusolo skill"
 else fail "init writes /opusolo skill" "missing"

@@ -1,15 +1,13 @@
-# Skill catalog — lean 32 active + 1 deprecated stub
+# Skill catalog — lean 31 active
 
-Audited for overlap. Every skill has a distinct, non-overlapping purpose. Compare to v1's 43-skill catalog: 17 cut, 3 added (`/agentteams`, `/tdd`, `/harness-audit`). Plus 2 ALIAS-for-/cmax entries (`/workflow`, `/opussonnet`) kept for v1 muscle memory. 1 deprecated stub (`/dispatch`) kept for v1 muscle memory; router should never pick it.
+Audited for overlap. Every skill has a distinct, non-overlapping purpose. Compare to v1's 43-skill catalog: 17 cut, 3 added (`/agentteams`, `/tdd`, `/harness-audit`). Trimmed 2026-05-28: the `/workflow` + `/opussonnet` ALIAS-for-/cmax entries (`/workflow` collided with Claude Code's native **Workflow tool**) and the deprecated `/dispatch` stub. The `opussonnet`/`opusolo` model-routing **variants** remain in the CLI (`cmax run --variant`), independent of any skill.
 
-## Umbrellas (5 directories; 3 effective + 2 explicit aliases) — daily-drivers; each auto-runs the full pipeline
+## Umbrellas (3) — daily-drivers; each auto-runs the full pipeline
 
 | Skill | Plan/judge | Sub-Spec /goal exec | Verify | Use |
 |---|---|---|---|---|
 | `/ask` | Opus | Sonnet | Opus | Canonical user-facing entry (same engine as `/cmax`) |
 | `/cmax` | Opus | Sonnet | Opus | Brand umbrella; daily-driver default |
-| `/workflow` | Opus | Sonnet | Opus | ALIAS for /cmax — v1 muscle memory only |
-| `/opussonnet` | Opus | Sonnet | Opus | ALIAS for /cmax — v1 muscle memory only |
 | `/opusolo` | Opus | **Opus** | Opus | Max effectiveness; auth/payments/novel-domain |
 
 ## Research (5)
