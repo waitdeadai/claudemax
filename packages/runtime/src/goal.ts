@@ -39,7 +39,15 @@ export interface GoalRunResult {
 }
 
 export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<GoalRunResult> {
-  const maxTurns = opts.maxTurns ?? 200;
+  // Coerce defensively: `?? 200` does NOT catch NaN, and the CLI passes
+  // Number(opts.maxTurns) which is NaN on a bad/empty flag — `turns >= NaN` is
+  // always false, which silently disables the cap (observed: 150-cap run hit 235,
+  // 100-cap hit 120). Reject NaN / non-positive so the cap is always a finite bound.
+  const maxTurns =
+    typeof opts.maxTurns === "number" && Number.isFinite(opts.maxTurns) && opts.maxTurns > 0
+      ? opts.maxTurns
+      : 200;
+  process.stderr.write(`  [goal] turn cap = ${maxTurns}\n`);
   const execModel = opts.model ?? MODELS.opus.id;
   const execTier = modelById(execModel).tier;
   // Fallback to the other major tier so an overload on the executor still makes progress.
@@ -74,6 +82,7 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
   });
 
   const q = opts.queryFn ?? query;
+  try {
   for await (const message of q({
     prompt: `Pursue the goal in the system prompt. Begin by re-reading the SPEC carefully, then act. Stop only when every completion condition is met or you are genuinely blocked.`,
     options: {
@@ -128,6 +137,17 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
         cacheReadTokens += stats.cacheReadTokens;
         cacheWriteTokens += stats.cacheWrite5mTokens + stats.cacheWrite1hTokens;
       }
+    }
+  }
+  } catch (err) {
+    // The SDK throws "Reached maximum number of turns (N)" when ITS own turn count
+    // hits maxTurns before our per-assistant-message break fires. Treat that as a
+    // graceful cap (partial work is on disk), not a propagated crash.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/maximum number of turns/i.test(msg)) {
+      hitTurnCap = true;
+    } else {
+      throw err;
     }
   }
 
@@ -190,7 +210,10 @@ export async function runGoalNative(
   opts: GoalRunOptions = {},
 ): Promise<GoalRunResult> {
   const cwd = opts.cwd ?? process.cwd();
-  const maxTurns = opts.maxTurns ?? 200;
+  const maxTurns =
+    typeof opts.maxTurns === "number" && Number.isFinite(opts.maxTurns) && opts.maxTurns > 0
+      ? opts.maxTurns
+      : 200;
   const otel = buildOtelEnv({ agentId: undefined, parentAgentId: undefined });
   const env = { ...process.env, ...otel, ...(opts.env ?? {}) };
 

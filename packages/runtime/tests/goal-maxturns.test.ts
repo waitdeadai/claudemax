@@ -44,4 +44,22 @@ describe("runGoal — deterministic --max-turns cap", () => {
     expect(r.turns).toBe(2);
     expect(r.status).toBe("finished");
   });
+
+  it("a NaN/invalid maxTurns falls back to the 200 cap, NEVER unbounded (the real runaway bug)", async () => {
+    // Root cause of the live runaways: the CLI passed Number(opts.maxTurns) which
+    // was NaN, and `?? 200` does not catch NaN → `turns >= NaN` is always false →
+    // no cap. The defensive coercion must clamp NaN to the 200 default.
+    let yielded = 0;
+    async function* fakeQuery() {
+      for (let i = 0; i < 250; i++) {
+        yielded += 1;
+        yield { type: "assistant" };
+      }
+      yield { type: "result", result: "FINISHED\nSUMMARY: x", usage: {} };
+    }
+    const r = await runGoal(spec(), { maxTurns: NaN as never, queryFn: fakeQuery as never });
+    expect(r.turns).toBe(200);
+    expect(r.status).toBe("max-turns");
+    expect(yielded).toBeLessThanOrEqual(200);
+  });
 });

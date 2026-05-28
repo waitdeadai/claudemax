@@ -30,10 +30,16 @@ export function goalCommand(): Command {
         console.log(kleur.cyan(`→ goal: ${spec.title}${opts.nativeGoal ? " (native /goal wrapper)" : ""}`));
         console.log(kleur.dim(`  ${spec.completionConditions.length} completion conditions`));
         const useNative = opts.nativeGoal || process.env["CMAX_USE_NATIVE_GOAL"] === "1";
+        // Guard against NaN from a bad/empty --max-turns (NaN silently disables the
+        // turn cap downstream); log the raw value so the cap is diagnosable.
+        const maxTurnsNum = Number(opts.maxTurns) || 200;
+        process.stderr.write(
+          `  [goal-cli] --max-turns raw=${JSON.stringify(opts.maxTurns)} → cap ${maxTurnsNum}\n`,
+        );
         const r = useNative
-          ? await runGoalNative(spec, { maxTurns: Number(opts.maxTurns) })
+          ? await runGoalNative(spec, { maxTurns: maxTurnsNum })
           : await runGoal(spec, {
-              maxTurns: Number(opts.maxTurns),
+              maxTurns: maxTurnsNum,
               permissionMode: opts.permission as "default" | "acceptEdits" | "plan" | "bypassPermissions",
               onTurn: (turn) => {
                 if (turn % 5 === 0) process.stderr.write(kleur.dim(`  ${turn} turns…\n`));
