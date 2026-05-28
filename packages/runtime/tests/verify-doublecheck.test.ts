@@ -58,25 +58,24 @@ describe("applyDoubleCheck (verify.ts doubleCheck combiner)", () => {
     expect(out.reason).toBeUndefined();
   });
 
-  it("doubleCheck disagreement: surfaces 'unverified' with reason listing both verdicts; does NOT flip Opus per-condition findings", () => {
+  it("doubleCheck disagreement: WARN-only — Opus verdict STANDS, a non-authoritative warning is appended to notes (never overrides)", () => {
     const opus = report("verified");
     const out = applyDoubleCheck(opus, {
       verdict: "failed",
       reason: "evidence does not match the claim",
     });
-    expect(out.verdict).toBe("unverified");
-    expect(out.reason).toBeDefined();
-    expect(out.reason).toContain("opus=verified");
-    expect(out.reason).toContain("haiku=failed");
+    // v5-aligned: the weak (Haiku) judge never overrides the strong (Opus) verdict.
+    expect(out.verdict).toBe("verified");
+    expect(out.notes).toContain("haiku-recall-check");
+    expect(out.notes).toContain("evidence does not match the claim");
     expect(out.perCondition).toEqual(opus.perCondition);
     expect(out.perCondition[0]?.met).toBe(true);
   });
 
-  it("doubleCheck disagreement when opus=partial vs haiku=verified: still 'unverified'", () => {
+  it("doubleCheck disagreement when opus=partial vs haiku=verified: verdict stays 'partial', warning surfaced", () => {
     const opus = report("partial");
     const out = applyDoubleCheck(opus, { verdict: "verified" });
-    expect(out.verdict).toBe("unverified");
-    expect(out.reason).toContain("opus=partial");
-    expect(out.reason).toContain("haiku=verified");
+    expect(out.verdict).toBe("partial");
+    expect(out.notes).toContain("haiku-recall-check");
   });
 });

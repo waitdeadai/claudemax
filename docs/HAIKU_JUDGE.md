@@ -23,23 +23,32 @@ observed multiple times this session:
 
 When `verify()` is called with `{ doubleCheck: true }`, after the Opus
 verifier produces its per-condition findings and a `verdict ∈ {verified,
-partial, failed}`, a Haiku 4.5 second-opinion runs on the same evidence
-package. If Haiku disagrees with Opus, the report downgrades to
-`verdict: "unverified"` with a `reason` naming the disagreement.
+partial, failed}`, a Haiku 4.5 cross-model recall check runs on the same
+evidence package. It is **WARN-only**: on disagreement, the report's
+`notes` gains a non-authoritative `⚠ haiku-recall-check` warning and **the
+Opus verdict STANDS** — it is never overridden. Opus is the authority
+(house rule #4); Haiku only boosts recall on false-passes.
 
-Motivation: in this session we've seen at least 5 cmax-asks emit
-`rollup: partial` when ground-truth (`pnpm typecheck && pnpm test`) was
-green. Root cause was usually that the harness auto-rewrote `SPEC.md`
-and the verifier flagged this as scope-creep. A Haiku second-opinion
-on the evidence (not just the goal-string) catches these false-partials
-so a human is alerted to look.
+This is the **v5-aligned cascade shape** (2026-05-28): a strong floor +
+a cheap-LLM WARN ceiling. The earlier behavior — Haiku *overriding* the
+Opus verdict to `"unverified"` on any disagreement — was a weak-judge-
+overrides-strong anti-pattern (the exact inversion the llm-dark-patterns
+v5 study argues against, mirroring its WARN-only / fire-on-floor-pass
+contract) and was removed.
+
+Motivation: catch FALSE-PASSES — conditions Opus accepted as met that the
+evidence doesn't clearly support (the over-optimism / sycophancy failure
+mode). A human is alerted via the warning to look, without the verdict
+being flipped by the weaker judge.
 
 Wiring:
 ```typescript
 import { verify } from "@claudemax/runtime";
 const report = await verify(spec, { cwd, doubleCheck: true });
-if (report.verdict === "unverified") {
-  // opus + haiku disagreed; report.reason explains how
+// verdict is ALWAYS Opus's (never overridden by Haiku). A disagreement
+// surfaces as a non-authoritative warning appended to report.notes:
+if (report.notes.includes("haiku-recall-check")) {
+  // Haiku flagged a possible false-pass — surface to a human; verdict unchanged.
 }
 ```
 
@@ -54,8 +63,10 @@ analysis, and explicit caveats about circularity), the verifier
 double-check is currently a design + 4-test regression suite — no
 held-out corpus, no measured agreement rate against ground-truth.
 
-If you ship `doubleCheck: true` to production, treat the resulting
-`unverified` verdicts as **candidate flags**, not validated
+Because the tier is now **WARN-only** (it can never flip the verdict), it
+is strictly additive — the worst case is a noisy warning, never a wrongly-
+overridden verdict. If you ship `doubleCheck: true`, treat the resulting
+`haiku-recall-check` warnings as **candidate flags**, not validated
 disagreements. A real validation effort would:
 1. Collect ~30 cmax-ask runs where `pnpm typecheck && test` is green
    but rollup verdict is non-verified.

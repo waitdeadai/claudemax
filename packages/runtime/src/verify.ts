@@ -192,8 +192,8 @@ async function runHaikuDoubleCheck(
     `Per-condition findings:`,
     findings || "(none)",
     "",
-    "Re-judge whether the Opus verdict is well-supported by these findings.",
-    "Use LOG when you agree with Opus; use BLOCK when you strongly disagree (verdict should have been the opposite); use WARN/REDACT when you partially disagree.",
+    "You are a NON-AUTHORITATIVE, WARN-only recall check (cross-model: Haiku reviewing an Opus verdict). You do NOT decide the verdict — Opus does. Catch FALSE-PASSES: conditions Opus may have accepted as met that the evidence does not clearly support (the over-optimism / sycophancy failure mode).",
+    "Use LOG if the Opus verdict is well-supported. Use WARN/REDACT to flag an over-optimistically accepted condition. Never BLOCK — you cannot override Opus.",
   ].join("\n");
   const v = await judgeWithHaiku(
     {
@@ -230,13 +230,19 @@ export function applyDoubleCheck(
 ): VerificationReport {
   if (!haiku) return opus;
   if (opus.verdict === haiku.verdict) return opus;
-  const reason = `doubleCheck disagreement — opus=${opus.verdict}, haiku=${haiku.verdict}${
-    haiku.reason ? `; haiku: ${haiku.reason}` : ""
-  }`;
+  // v5-aligned WARN-only recall tier: the Haiku judge NEVER overrides the Opus
+  // verdict (house rule #4 — verify authority is Opus). A cross-model disagreement
+  // only SURFACES a non-authoritative warning for human review; the verdict stands.
+  // Rationale: the llm-dark-patterns v5 cascade study found a strong/deterministic
+  // floor + cheap-LLM WARN ceiling beats letting the weak judge override the strong
+  // (weak-judge-overriding-strong is an anti-pattern; this catches recall misses
+  // without inverting authority).
+  const warn = `⚠ haiku-recall-check (non-authoritative, WARN-only): Haiku read this as ${haiku.verdict}${
+    haiku.reason ? ` — ${haiku.reason}` : ""
+  }. Opus verdict (${opus.verdict}) stands; review if unsure.`;
   return {
     ...opus,
-    verdict: "unverified",
-    reason,
+    notes: opus.notes ? `${opus.notes}\n${warn}` : warn,
   };
 }
 

@@ -4,6 +4,12 @@ All notable changes to claudemax. Format loosely follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Fixed — 2026-05-28 Haiku verify-doubleCheck → WARN-only recall tier (v5-cascade-aligned)
+
+- **`packages/runtime/src/verify.ts` `applyDoubleCheck`**: the Haiku double-check no longer **overrides** the Opus verdict to `"unverified"` on disagreement. That was a weak-judge-overrides-strong anti-pattern — the exact inversion the llm-dark-patterns **v5 cascade study** argues against (its WARN-tier never escalates to BLOCK; the deterministic/strong floor owns the verdict). Now the Haiku tier is **WARN-only**: a cross-model disagreement appends a non-authoritative `⚠ haiku-recall-check` note to `report.notes` and **the Opus verdict stands** (reinforces house rule #4 — verify authority is Opus). The Haiku prompt is reframed as a false-pass / over-optimism (sycophancy) recall check rather than a verdict re-vote. Strictly additive: worst case is a noisy warning, never a wrongly-overridden verdict.
+- `packages/runtime/tests/verify-doublecheck.test.ts` updated: disagreement now asserts verdict-preserved + warning-in-notes (was: verdict→unverified).
+- `docs/HAIKU_JUDGE.md` updated to the WARN-only shape. Diagnosis confirmed: claudemax's tier judges the internal `VerificationReport` (disjoint from llm-dark-patterns' closeout-TEXT hooks); the dark-patterns **v5 Haiku WARN cascade is merged to llm-dark-patterns `main`** — this install's vendored copy was re-synced to it.
+
 ### Changed — 2026-05-28 Opus 4.8 retarget (primary model + xhigh/ultracode tailoring)
 
 Opus 4.8 shipped 2026-05-28. Verified live against [Anthropic's announcement](https://www.anthropic.com/news/claude-opus-4-8), [models overview](https://platform.claude.com/docs/en/about-claude/models/overview), and the [Effort guide](https://platform.claude.com/docs/en/build-with-claude/effort) (all accessed 2026-05-28). Pricing, context (1M), max output (128k), and cache structure are **unchanged** from 4.7 — only the model id and behavior tuning move.
