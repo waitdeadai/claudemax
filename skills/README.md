@@ -1,17 +1,15 @@
 # claudemax skills
 
-Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) for the lean 29-skill power-user catalog (27 active + 2 aliases). One additional directory (`/dispatch`) ships as a DEPRECATED stub for v1 muscle memory; the router should never pick it.
+Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) for the lean 31-skill power-user catalog — all active, no aliases, no deprecated stubs (trimmed 2026-05-28).
 
 ## Catalog
 
-### Umbrellas (5) — daily drivers; each auto-runs the full pipeline
+### Umbrellas (3) — daily drivers; each auto-runs the full pipeline
 
 | Skill | Plan/judge | Sub-Spec /goal exec | Verify | Use |
 |---|---|---|---|---|
 | `/ask` | Opus | Sonnet | Opus | Canonical ask-and-achieve entry. `cmax ask "<goal>"` CLI equivalent |
 | `/cmax` | Opus | Sonnet | Opus | Default daily-driver; brand umbrella |
-| `/workflow` | Opus | Sonnet | Opus | Alias for /cmax (v1 muscle memory) |
-| `/opussonnet` | Opus | Sonnet | Opus | v1 muscle memory; same engine |
 | `/opusolo` | Opus | **Opus** | Opus | Max-effectiveness; auth/payments/novel-domain |
 
 ### Research (5)
@@ -78,7 +76,9 @@ Drop these into `.claude/skills/` in any Claude Code project (via `cmax init`) f
 | `/harness-audit` | Periodic review of claudemax's own scaffolding against current Opus capability |
 | `/cc-audit` | SOTA-2026 deepresearch-backed audit of new Claude Code CLI releases; verdict per change (IGNORE/WRAP/INTEGRATE/DEFER) so the harness never ships conflicting or redundant tools |
 
-## Total: 32 active skills (5 umbrellas + 5 research + 2 planning + 6 execution + 3 verification + 3 memory + 2 taste + 5 infrastructure + 1 specqa porting addition = 32, includes new `/specqa` under Planning and new `/cc-audit` under Infrastructure landed 2026-05-22). Two of the 5 umbrellas (`/workflow`, `/opussonnet`) are explicit ALIAS-for-/cmax entries kept only for v1 muscle memory. One additional directory (`/dispatch`) ships as a DEPRECATED stub — router should skip; use `/parallel` or the CLI `cmax dispatch` instead.
+## Total: 31 skill directories, all active (trimmed 2026-05-28).
+
+Removed: the `/workflow` + `/opussonnet` ALIAS-for-/cmax entries (`/workflow` collided with Claude Code's native **Workflow tool**; both duplicated `/cmax`) and the deprecated `/dispatch` stub. The `opussonnet`/`opusolo` model-routing **variants** are unaffected — they live in the CLI (`cmax run --variant {opussonnet|opusolo}`), not as skills. For low-level packet fan-out use `/parallel` or the CLI `cmax dispatch`.
 
 Lean, audited for overlap. Cuts vs v1's 43-skill catalog: MiniMax-specific skills dropped entirely; /webresearch merged into /deepresearch; /autoplan into the multispec engine; /qa into /verify; /digestaste + /digestflow are internal runtime functions; /tastebootstrap replaced by auto-bootstrap /taste; product-specific skills (/defineicp /icpweek /claudeproduct etc.) deferred.
 

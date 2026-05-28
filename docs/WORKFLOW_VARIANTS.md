@@ -1,26 +1,27 @@
-# Workflow variants
+# Execution variants
 
-Four umbrellas. All four auto-run the same full pipeline (deepresearch + multispec + parallel /goal + verify + rollup verify). They differ only in **sub-Spec /goal exec tier**.
+> Naming note: this is about the cmax **`--variant`** model-routing tiers, NOT Claude Code's native **Workflow tool** (the multi-subagent orchestration primitive triggered by the word "workflow"). The `/workflow` umbrella alias was removed 2026-05-28 precisely to avoid that collision.
 
-| Skill | Plan/judge | Sub-Spec /goal exec | Verify | When |
+Two umbrellas auto-run the same full pipeline (deepresearch + multispec + parallel /goal + verify + rollup verify). They differ only in **sub-Spec /goal exec tier**, also selectable directly via `cmax run --variant {opussonnet|opusolo}`.
+
+| Umbrella / variant | Plan/judge | Sub-Spec /goal exec | Verify | When |
 |---|---|---|---|---|
-| `/cmax` | Opus | **Sonnet** | Opus | Default daily-driver |
-| `/workflow` | Opus | Sonnet | Opus | Alias for /cmax (v1 muscle memory) |
-| `/opussonnet` | Opus | Sonnet | Opus | v1 muscle memory; same as /cmax |
-| `/opusolo` | Opus | **Opus** | Opus | Max-effectiveness; ~3× cost |
+| `/cmax` (`--variant opussonnet`, default) | Opus | **Sonnet** | Opus | Default daily-driver (`/ask` = same engine) |
+| `/opusolo` (`--variant opusolo`) | Opus | **Opus** | Opus | Max-effectiveness; ~3× cost |
 
-## Why only four
+## Why so few
 
-v1 had 6 core execution variants (/workflow, /opusworkflow, /opusminimax, /sonnetminimax, /opussonnet, /opusolo) plus /hiveworkflow. v2 cut to 4:
+v1 had 6 core execution variants (/workflow, /opusworkflow, /opusminimax, /sonnetminimax, /opussonnet, /opusolo) plus /hiveworkflow. v2 collapsed these to two exec tiers (`opussonnet`, `opusolo`) reachable via two umbrellas (`/cmax`, `/opusolo`):
 
 - `/opusminimax` + `/sonnetminimax` → dropped (MiniMax-specific).
-- `/opusworkflow` → identical to `/opussonnet` in v2 (MiniMax slot → Sonnet); kept under /opussonnet name.
-- `/hiveworkflow` → use `/opussonnet --mode teams` for swarm behavior (Mode B).
+- `/opusworkflow` → folded into the `opussonnet` tier (MiniMax slot → Sonnet).
+- `/workflow` + `/opussonnet` umbrella **aliases** → removed 2026-05-28 (duplicated `/cmax`; `/workflow` collided with the native Workflow tool). The `opussonnet` exec tier lives on as `--variant opussonnet`.
+- `/hiveworkflow` → use `--variant opussonnet --mode teams` for swarm behavior (Mode B).
 - `/sonnetonly` → not requested; can be `--variant sonnet` if ever needed.
 
-## Picking between /cmax (= /opussonnet) and /opusolo
+## Picking between /cmax (default) and /opusolo
 
-| Signal | Use /opussonnet | Use /opusolo |
+| Signal | Use /cmax (opussonnet) | Use /opusolo |
 |---|---|---|
 | Routine refactor / feature / bug fix | ✓ | — |
 | Auth / payments / billing / crypto / secrets | — | ✓ (security domain — router would escalate anyway) |
