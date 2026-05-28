@@ -4,6 +4,10 @@ All notable changes to claudemax. Format loosely follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Fixed — 2026-05-28 `cmax goal --max-turns` is now a hard, pool-safe bound
+
+- **`packages/runtime/src/goal.ts`**: `runGoal` enforced the turn cap only through the SDK's `maxTurns` option, which does **not** bound a goal loop that fans out via the Agent tool — a run launched with `--max-turns 150` was observed reaching **235+ turns** (unbounded autonomous pool burn on a live build). The loop now aborts **deterministically** at our own layer: its own `AbortController` is triggered + the stream `break`s the moment the turn counter hits `maxTurns`. Adds a `queryFn` injection point and `packages/runtime/tests/goal-maxturns.test.ts` (caps exactly at 5; does not prematurely cap a short run that finishes first). 273 tests green.
+
 ### Fixed — 2026-05-28 Haiku verify-doubleCheck → WARN-only recall tier (v5-cascade-aligned)
 
 - **`packages/runtime/src/verify.ts` `applyDoubleCheck`**: the Haiku double-check no longer **overrides** the Opus verdict to `"unverified"` on disagreement. That was a weak-judge-overrides-strong anti-pattern — the exact inversion the llm-dark-patterns **v5 cascade study** argues against (its WARN-tier never escalates to BLOCK; the deterministic/strong floor owns the verdict). Now the Haiku tier is **WARN-only**: a cross-model disagreement appends a non-authoritative `⚠ haiku-recall-check` note to `report.notes` and **the Opus verdict stands** (reinforces house rule #4 — verify authority is Opus). The Haiku prompt is reframed as a false-pass / over-optimism (sycophancy) recall check rather than a verdict re-vote. Strictly additive: worst case is a noisy warning, never a wrongly-overridden verdict.

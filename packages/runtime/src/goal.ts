@@ -22,6 +22,8 @@ export interface GoalRunOptions {
   readonly env?: Record<string, string>;
   readonly abortSignal?: AbortSignal;
   readonly resume?: string;
+  /** Injection point for tests. Production leaves undefined → live SDK query(). */
+  readonly queryFn?: typeof query;
 }
 
 export interface GoalRunResult {
@@ -42,6 +44,13 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
   const execTier = modelById(execModel).tier;
   // Fallback to the other major tier so an overload on the executor still makes progress.
   const fallbackModel = execModel === MODELS.sonnet.id ? MODELS.opus.id : MODELS.sonnet.id;
+  // Enforce maxTurns deterministically at OUR layer. The SDK's maxTurns option does
+  // not reliably bound a goal loop that fans out via the Agent tool (observed: a run
+  // capped at 150 reached 235+). We abort the stream ourselves when the turn counter
+  // hits the cap so --max-turns is a hard, pool-safe bound.
+  const capController = new AbortController();
+  if (opts.abortSignal) opts.abortSignal.addEventListener("abort", () => capController.abort());
+  let hitTurnCap = false;
   let turns = 0;
   let tokensIn = 0;
   let tokensOut = 0;
@@ -61,10 +70,11 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
       opts.maxBudgetUsd !== undefined
         ? estimateTaskBudgetTokens(execTier, opts.maxBudgetUsd)
         : undefined,
-    abortSignal: opts.abortSignal,
+    abortSignal: capController.signal,
   });
 
-  for await (const message of query({
+  const q = opts.queryFn ?? query;
+  for await (const message of q({
     prompt: `Pursue the goal in the system prompt. Begin by re-reading the SPEC carefully, then act. Stop only when every completion condition is met or you are genuinely blocked.`,
     options: {
       model: execModel,
@@ -103,6 +113,11 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
     if (m.type === "assistant") {
       turns += 1;
       opts.onTurn?.(turns, "");
+      if (turns >= maxTurns) {
+        hitTurnCap = true;
+        capController.abort();
+        break;
+      }
     }
     if (m.type === "result" && typeof m.result === "string") {
       finalResult = m.result;
@@ -118,8 +133,11 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
 
   const parsed = parseGoalDriverOutput(finalResult);
   return {
-    status: parsed.status,
-    summary: parsed.summary,
+    status: hitTurnCap ? "max-turns" : parsed.status,
+    summary:
+      hitTurnCap && !parsed.summary
+        ? `aborted at the --max-turns cap (${maxTurns}); partial work is on disk`
+        : parsed.summary,
     evidence: parsed.evidence,
     turns,
     tokensIn,
