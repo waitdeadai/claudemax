@@ -29,7 +29,7 @@ const program = new Command();
 program
   .name("cmax")
   .description(kleur.bold("claudemax") + " — Anthropic-native power-user harness")
-  .version("0.2.0");
+  .version("0.2.2");
 
 program.addCommand(askCommand());
 program.addCommand(orchestrateCommand());

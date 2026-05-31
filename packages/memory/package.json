@@ -1,6 +1,6 @@
 {
   "name": "@claudemax/memory",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "claudemax persistent memory — SQLite + FTS5 store with research_sources, taste_history, sub_specs, runs, decisions, errors, patterns, episodes.",
   "type": "module",
   "main": "./dist/index.js",
@@ -42,7 +42,13 @@
   },
   "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/memory#readme",
   "bugs": "https://github.com/waitdeadai/claudemax/issues",
-  "keywords": ["claudemax", "memory", "sqlite", "fts5", "agent-memory"],
+  "keywords": [
+    "claudemax",
+    "memory",
+    "sqlite",
+    "fts5",
+    "agent-memory"
+  ],
   "publishConfig": {
     "access": "public"
   }

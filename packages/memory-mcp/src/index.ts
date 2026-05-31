@@ -16,7 +16,7 @@ import {
 } from "./queries.js";
 
 const SERVER_NAME = "claudemax-memory-mcp";
-const SERVER_VERSION = "0.2.0";
+const SERVER_VERSION = "0.2.2";
 
 // stdio discipline: stdout is reserved for JSON-RPC. ALL diagnostics → stderr.
 // A console.log anywhere in this package corrupts the protocol stream.

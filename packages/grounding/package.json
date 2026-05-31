@@ -1,6 +1,6 @@
 {
   "name": "@claudemax/grounding",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "claudemax grounding compile — promotes blessed vault notes into memory.sqlite (decisions + project_facts) and compiles invariants into CLAUDE.md managed blocks.",
   "type": "module",
   "main": "./dist/index.js",
@@ -43,7 +43,14 @@
   },
   "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/grounding#readme",
   "bugs": "https://github.com/waitdeadai/claudemax/issues",
-  "keywords": ["claudemax", "grounding", "obsidian", "vault", "sqlite", "claude-md"],
+  "keywords": [
+    "claudemax",
+    "grounding",
+    "obsidian",
+    "vault",
+    "sqlite",
+    "claude-md"
+  ],
   "publishConfig": {
     "access": "public"
   }

@@ -1,6 +1,6 @@
 {
   "name": "@claudemax/cli",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "claudemax CLI — cmax binary. Multispec pipeline, plan-aware billing, remote-from-phone orchestration, taste auto-bootstrap.",
   "type": "module",
   "bin": {
@@ -43,7 +43,16 @@
   },
   "homepage": "https://github.com/waitdeadai/claudemax#readme",
   "bugs": "https://github.com/waitdeadai/claudemax/issues",
-  "keywords": ["claudemax", "cmax", "claude", "anthropic", "cli", "agent-harness", "multispec", "autonomous"],
+  "keywords": [
+    "claudemax",
+    "cmax",
+    "claude",
+    "anthropic",
+    "cli",
+    "agent-harness",
+    "multispec",
+    "autonomous"
+  ],
   "publishConfig": {
     "access": "public"
   }

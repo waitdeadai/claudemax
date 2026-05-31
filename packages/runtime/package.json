@@ -1,6 +1,6 @@
 {
   "name": "@claudemax/runtime",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "claudemax runtime — Claude Agent SDK orchestrator, multispec engine, Agent Teams driver, taste auto-bootstrap, /goal driver, blind verifier.",
   "type": "module",
   "main": "./dist/index.js",
@@ -57,7 +57,15 @@
   },
   "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/runtime#readme",
   "bugs": "https://github.com/waitdeadai/claudemax/issues",
-  "keywords": ["claudemax", "claude", "anthropic", "claude-agent-sdk", "multispec", "agent-teams", "autonomous"],
+  "keywords": [
+    "claudemax",
+    "claude",
+    "anthropic",
+    "claude-agent-sdk",
+    "multispec",
+    "agent-teams",
+    "autonomous"
+  ],
   "publishConfig": {
     "access": "public"
   }

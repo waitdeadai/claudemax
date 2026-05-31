@@ -56,7 +56,7 @@ echo
 
 echo "--- top-level ---"
 assert_exit 0 "cmax --version exits 0" $CMAX --version
-assert_output_contains "0.2.0" "cmax --version prints 0.2.0" $CMAX --version
+assert_output_contains "0.2.2" "cmax --version prints 0.2.2" $CMAX --version
 assert_exit 0 "cmax --help exits 0" $CMAX --help
 assert_output_contains "multispec pipeline" "help mentions multispec pipeline" $CMAX --help
 
@@ -229,8 +229,8 @@ done
 
 # package.json sanity: version + license + publishConfig
 for pkg in packages/core packages/runtime packages/memory packages/cli; do
-  if python3 -c "import json; d=json.load(open('$pkg/package.json')); assert d.get('version')=='0.2.0', 'version'; assert d.get('license')=='Apache-2.0', 'license'; assert d.get('publishConfig',{}).get('access')=='public', 'publishConfig'" 2>/dev/null; then
-    ok "$pkg/package.json — version=0.2.0, license=Apache-2.0, publishConfig=public"
+  if python3 -c "import json; d=json.load(open('$pkg/package.json')); assert d.get('version')=='0.2.2', 'version'; assert d.get('license')=='Apache-2.0', 'license'; assert d.get('publishConfig',{}).get('access')=='public', 'publishConfig'" 2>/dev/null; then
+    ok "$pkg/package.json — version=0.2.2, license=Apache-2.0, publishConfig=public"
   else
     fail "$pkg/package.json sanity" "missing version/license/publishConfig"
   fi

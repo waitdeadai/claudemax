@@ -1,6 +1,6 @@
 {
   "name": "@claudemax/core",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "claudemax core — model registry, router, multispec schema, plan-aware cost.",
   "type": "module",
   "main": "./dist/index.js",
@@ -45,7 +45,14 @@
   },
   "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/core#readme",
   "bugs": "https://github.com/waitdeadai/claudemax/issues",
-  "keywords": ["claudemax", "claude", "anthropic", "router", "multispec", "model-routing"],
+  "keywords": [
+    "claudemax",
+    "claude",
+    "anthropic",
+    "router",
+    "multispec",
+    "model-routing"
+  ],
   "publishConfig": {
     "access": "public"
   }
