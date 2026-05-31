@@ -18,5 +18,8 @@ dist/
 coverage/
 .turbo/
 
-# Vendored sibling repo (cloned by setup.sh; sync via pnpm dark-patterns:sync)
+# Vendored sibling repo (cloned by setup.sh; sync via pnpm dark-patterns:sync / searchoclock:sync)
 vendor/
+
+# searchoclock hook state dir (last-error.md + state.json) — never committed
+.searchoclock/

@@ -289,6 +289,8 @@ claude plugin install llm-dark-patterns@waitdeadai-plugins
 
 See `.claude/DARK_PATTERNS_INSTALL.md` for the full inventory and standalone install paths.
 
+claudemax also vendors [waitdeadai/searchoclock](https://github.com/waitdeadai/searchoclock) (same vendor rail as dark-patterns): a `PostToolUseFailure(Bash)` failure-research hook that, on a command failure, runs date-aware deep-research troubleshooting with an **independent Anthropic-only second-model validator** (Haiku 4.5, escalate Sonnet 4.6 — `SEARCHOCLOCK_VALIDATOR_CROSS_PROVIDER` stays empty) and records the validated durable fix into `errors_solutions`, where `grounded-worker` later reads it. Fail-open, never blocks the agent loop; the opt-in proactive preflight stays off by default. See [`docs/searchoclock.md`](./docs/searchoclock.md).
+
 ## CLI
 
 ```bash

@@ -114,6 +114,21 @@ else
   fi
 fi
 
+head "bundle searchoclock (waitdeadai — date-aware failure research hook)"
+if [ -d "$INSTALL_DIR/vendor/searchoclock/.git" ]; then
+  git -C "$INSTALL_DIR/vendor/searchoclock" pull --ff-only --quiet 2>/dev/null || true
+  ( cd "$INSTALL_DIR" && node scripts/soc-denamespace.mjs ) || true
+  ok "updated vendor/searchoclock"
+else
+  mkdir -p "$INSTALL_DIR/vendor"
+  if git clone --depth 1 https://github.com/waitdeadai/searchoclock.git "$INSTALL_DIR/vendor/searchoclock" 2>/dev/null; then
+    ( cd "$INSTALL_DIR" && node scripts/soc-denamespace.mjs ) || true
+    ok "cloned vendor/searchoclock"
+  else
+    warn "searchoclock clone failed (offline?); run later: pnpm searchoclock:sync"
+  fi
+fi
+
 head "symlink cmax"
 BIN_SRC="$INSTALL_DIR/packages/cli/dist/index.js"
 [ -f "$BIN_SRC" ] || { err "build did not produce $BIN_SRC"; exit 1; }

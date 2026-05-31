@@ -1,0 +1,17 @@
+claudemax
+Copyright 2026 waitdeadai
+
+Licensed under the Apache License, Version 2.0 (the "License"); see the LICENSE
+file. This product bundles or vendors the following components from waitdeadai,
+each under the Apache License, Version 2.0:
+
+- searchoclock — https://github.com/waitdeadai/searchoclock
+  Date-aware failure-research Claude Code hook. The hook script is vendored into
+  vendor/searchoclock (not committed; fetched via `pnpm searchoclock:sync`). Its
+  researcher/validator agents and /searchoclock command are copied into
+  .claude/agents/ and .claude/commands/, de-namespaced for first-party (non-plugin)
+  use by scripts/soc-denamespace.mjs.
+
+- llm-dark-patterns — https://github.com/waitdeadai/llm-dark-patterns
+  Closeout-honesty hooks. Vendored into vendor/llm-dark-patterns (not committed;
+  fetched via `pnpm dark-patterns:sync`) and referenced via .claude/hooks/dp.sh.

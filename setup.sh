@@ -17,6 +17,7 @@
 # Flags:
 #   --global                  symlink to /usr/local/bin (needs sudo) instead of ~/.local/bin
 #   --skip-dark-patterns      skip the dark-patterns plugin install hint
+#   --skip-searchoclock       skip the searchoclock failure-research hook vendor
 #   --skip-tailscale          do not auto-install Tailscale (you'll install it yourself)
 #   --skip-tmux               do not auto-install tmux
 #   --skip-qrencode           do not auto-install qrencode (phone QR codes degrade to URLs)
@@ -33,6 +34,7 @@ set -euo pipefail
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.claudemax}"
 GLOBAL_LINK=false
 SKIP_DARK_PATTERNS=false
+SKIP_SEARCHOCLOCK=false
 SKIP_TAILSCALE=false
 SKIP_TMUX=false
 SKIP_QRENCODE=false
@@ -43,6 +45,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --global) GLOBAL_LINK=true; shift ;;
     --skip-dark-patterns) SKIP_DARK_PATTERNS=true; shift ;;
+    --skip-searchoclock) SKIP_SEARCHOCLOCK=true; shift ;;
     --skip-tailscale) SKIP_TAILSCALE=true; shift ;;
     --skip-tmux) SKIP_TMUX=true; shift ;;
     --skip-qrencode) SKIP_QRENCODE=true; shift ;;
@@ -201,6 +204,23 @@ else
     else
       warn "vendor clone failed (offline?); cmax init will skip dark-patterns until you run: pnpm dark-patterns:sync"
     fi
+  fi
+fi
+
+head "bundle searchoclock (waitdeadai — date-aware failure research hook)"
+if [ "$SKIP_SEARCHOCLOCK" = true ]; then
+  warn "skipped (--skip-searchoclock); the PostToolUseFailure research hook will not be wired"
+elif [ -d "$INSTALL_DIR/vendor/searchoclock/.git" ]; then
+  git -C "$INSTALL_DIR/vendor/searchoclock" pull --ff-only --quiet 2>/dev/null || true
+  ( cd "$INSTALL_DIR" && node scripts/soc-denamespace.mjs ) || true
+  ok "updated vendor/searchoclock"
+else
+  mkdir -p "$INSTALL_DIR/vendor"
+  if git clone --depth 1 https://github.com/waitdeadai/searchoclock.git "$INSTALL_DIR/vendor/searchoclock" 2>/dev/null; then
+    ( cd "$INSTALL_DIR" && node scripts/soc-denamespace.mjs ) || true
+    ok "cloned vendor/searchoclock"
+  else
+    warn "searchoclock clone failed (offline?); run later: pnpm searchoclock:sync"
   fi
 fi
 

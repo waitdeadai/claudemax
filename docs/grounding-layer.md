@@ -38,6 +38,7 @@ machine proposes  →  human blesses  →  compile promotes
 - **`packages/grounding`** — `cmax ground migrate | compile | export`: idempotent schema migration, vault→sqlite→CLAUDE.md compile, and sqlite→`vault/_inbox/` export of proposed rows for review.
 - **`.claude/hooks/freshness-gate.sh`** — first-party hook (referenced directly in `settings.json`, not via `dp.sh`). Fail-open, exit 0, injects `additionalContext`, never blocks.
 - **`.claude/agents/grounded-worker.md`** — the worker grounding contract. The runtime also prepends `GROUNDED_WORKER_CONTRACT` (in `packages/runtime/src/prompts.ts`) to every sub-Spec leaf spawn so Mode A and Mode B ground identically.
+- **`vendor/searchoclock` (vendored hook) + `.claude/hooks/soc.sh`** — closes the write side of the loop: on a Bash failure it records the validated durable fix into `errors_solutions`, which `grounded-worker` later reads via `mcp__memory__memory_search`. See [`searchoclock.md`](./searchoclock.md).
 
 ## The contrarian rule
 

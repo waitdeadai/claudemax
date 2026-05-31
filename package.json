@@ -17,7 +17,8 @@
     "dev": "pnpm -r --parallel --filter=./packages/* dev",
     "clean": "pnpm -r exec rm -rf dist node_modules/.cache && rm -rf node_modules",
     "dark-patterns:sync": "[ -d vendor/llm-dark-patterns/.git ] && git -C vendor/llm-dark-patterns pull --ff-only || (mkdir -p vendor && git clone --depth 1 https://github.com/waitdeadai/llm-dark-patterns.git vendor/llm-dark-patterns)",
-    "postinstall": "node -e \"const{existsSync}=require('fs');if(!existsSync('vendor/llm-dark-patterns'))console.warn('  hint: run: pnpm dark-patterns:sync (bundles llm-dark-patterns hooks)');\" || true",
+    "searchoclock:sync": "([ -d vendor/searchoclock/.git ] && git -C vendor/searchoclock pull --ff-only || (mkdir -p vendor && git clone --depth 1 https://github.com/waitdeadai/searchoclock.git vendor/searchoclock)) && node scripts/soc-denamespace.mjs",
+    "postinstall": "node -e \"const{existsSync}=require('fs');if(!existsSync('vendor/llm-dark-patterns'))console.warn('  hint: run: pnpm dark-patterns:sync (bundles llm-dark-patterns hooks)');if(!existsSync('vendor/searchoclock'))console.warn('  hint: run: pnpm searchoclock:sync (bundles the failure-research hook)');\" || true",
     "release:check": "pnpm build && pnpm test && pnpm smoke",
     "release:publish": "pnpm release:check && pnpm -r --filter=./packages/* --access public publish"
   },

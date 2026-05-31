@@ -297,6 +297,58 @@ else fail "dp.sh dispatches to no-vibes.sh" "exit=$rc"
 fi
 
 echo
+echo "--- searchoclock integration ---"
+# Discovery wrapper present + executable + fail-open (advisory hook; never blocks the loop).
+if [ -x .claude/hooks/soc.sh ]; then ok ".claude/hooks/soc.sh wrapper executable"
+else fail ".claude/hooks/soc.sh wrapper executable" "missing or not executable"
+fi
+bash .claude/hooks/soc.sh </dev/null >/dev/null 2>&1; rc=$?
+if [ "$rc" = "0" ]; then ok "soc.sh exits 0 (fail-open) on empty input"
+else fail "soc.sh fail-open exit 0" "exit=$rc"
+fi
+# Committed, de-namespaced agents + command resolve by BARE name.
+for f in .claude/agents/searchoclock-researcher.md .claude/agents/searchoclock-validator.md .claude/commands/searchoclock.md; do
+  if [ -f "$f" ]; then ok "$f present (committed first-party)"
+  else fail "$f present" "missing — run pnpm searchoclock:sync"
+  fi
+done
+if ! grep -rq "searchoclock:searchoclock" .claude/agents/searchoclock-researcher.md .claude/agents/searchoclock-validator.md .claude/commands/searchoclock.md 2>/dev/null; then
+  ok "committed agents/command carry NO residual searchoclock: namespace"
+else fail "committed agents/command de-namespaced" "residual searchoclock: token found"
+fi
+# Vendored hook (gitignored) — de-namespaced + fail-open. Only assert if vendored locally.
+if [ -f vendor/searchoclock/searchoclock.sh ]; then
+  if ! grep -q "searchoclock:searchoclock" vendor/searchoclock/searchoclock.sh; then
+    ok "vendored searchoclock.sh carries NO residual searchoclock: namespace"
+  else fail "vendored searchoclock.sh de-namespaced" "residual searchoclock: token — re-run scripts/soc-denamespace.mjs"
+  fi
+  bash vendor/searchoclock/searchoclock.sh </dev/null >/dev/null 2>&1; rc=$?
+  if [ "$rc" = "0" ]; then ok "vendored searchoclock.sh fail-opens (exit 0)"
+  else fail "vendored searchoclock.sh fail-open exit 0" "exit=$rc"
+  fi
+else
+  ok "vendor/searchoclock not present locally (gitignored; fetched by pnpm searchoclock:sync) — skipping vendored-hook asserts"
+fi
+# Anthropic-only invariant + additive settings.json registration (valid JSON, perms, env, hooks preserved).
+if node -e '
+  const s=JSON.parse(require("fs").readFileSync(".claude/settings.json","utf8"));
+  const e=s.env||{}, a=(s.permissions||{}).allow||[];
+  if (e.SEARCHOCLOCK_VALIDATOR_CROSS_PROVIDER !== "") throw new Error("CROSS_PROVIDER not empty");
+  if (e.SEARCHOCLOCK_VALIDATOR_MODEL !== "claude-haiku-4-5-20251001") throw new Error("validator not Haiku 4.5");
+  if (!a.includes("Agent(searchoclock-researcher)") || !a.includes("Agent(searchoclock-validator)")) throw new Error("bare agent perms missing");
+  if (a.some(x=>x.includes("searchoclock:searchoclock"))) throw new Error("namespaced agent perm leaked");
+  const h=s.hooks||{};
+  const cnt=k=>(h[k]||[]).reduce((n,b)=>n+(b.hooks||[]).length,0);
+  if (cnt("Stop") < 26) throw new Error("Stop hooks not preserved ("+cnt("Stop")+")");
+  if (cnt("SubagentStop") < 10) throw new Error("SubagentStop hooks not preserved");
+  if (!(h.PostToolUseFailure||[]).some(b=>b.matcher==="Bash")) throw new Error("PostToolUseFailure(Bash) missing");
+' 2>/tmp/soc_settings_err; then
+  ok "settings.json: valid JSON, CROSS_PROVIDER empty, Haiku validator, bare agent perms, pre-existing hooks preserved"
+else
+  fail "settings.json searchoclock invariants" "$(cat /tmp/soc_settings_err 2>/dev/null | head -c 200)"
+fi
+
+echo
 echo "=== summary ==="
 echo "  passed: $PASS"
 echo "  failed: $FAIL"
