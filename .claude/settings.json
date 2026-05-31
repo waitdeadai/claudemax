@@ -29,6 +29,7 @@
         "matcher": ".*",
         "hooks": [
           { "type": "command", "command": ".claude/hooks/cmax-session-start.sh" },
+          { "type": "command", "command": ".claude/hooks/freshness-gate.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh time-anchor.sh", "timeout": 3 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh state-sessionstart.sh", "timeout": 5 }
         ]
@@ -77,6 +78,7 @@
     "SubagentStop": [
       {
         "hooks": [
+          { "type": "command", "command": ".claude/hooks/freshness-gate.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-vibes.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh honest-eta.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-aggregator-hallucination.sh", "timeout": 5 },

@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as os from "node:os";
 import { renderSpecMarkdown, type ModelId, type MultiSpec, type Spec } from "@claudemax/core";
+import { GROUNDED_WORKER_CONTRACT } from "./prompts.js";
 
 export interface AgentTeamsRunOptions {
   readonly cwd: string;
@@ -134,6 +135,10 @@ async function spawnTeammate(o: SpawnTeammateOptions): Promise<"finished" | "blo
     `Read your sub-Spec carefully, then work autonomously until every completion condition is met.`,
     `Coordinate with peers through the shared task list — claim your tasks, mark them done with evidence, raise questions there.`,
     `When finished emit a FINISHED block with per-condition evidence; when blocked emit BLOCKED with the specific need.`,
+    ``,
+    // Mode B inherits the read-only memory MCP from the committed .mcp.json; the
+    // grounding contract is injected here so teammates ground identically to Mode A.
+    GROUNDED_WORKER_CONTRACT,
   ].join("\n");
 
   const args = ["-p", prompt, "--dangerously-skip-permissions"];

@@ -8,8 +8,14 @@ import {
   type Packet,
   type Plan,
 } from "@claudemax/core";
-import { PACKET_AGENT_SYSTEM } from "./prompts.js";
-import { baseSdkOptions, parseUsageWithCache, type EffortLevel } from "./sdk-options.js";
+import { GROUNDED_WORKER_CONTRACT, PACKET_AGENT_SYSTEM } from "./prompts.js";
+import {
+  baseSdkOptions,
+  memoryMcpServerConfig,
+  MEMORY_MCP_TOOLS,
+  parseUsageWithCache,
+  type EffortLevel,
+} from "./sdk-options.js";
 
 export interface DispatchOptions {
   readonly cwd?: string;
@@ -118,9 +124,10 @@ async function runPacket(
         systemPrompt: {
           type: "preset",
           preset: "claude_code",
-          append: PACKET_AGENT_SYSTEM(packet.title, specGoal),
+          append: `${PACKET_AGENT_SYSTEM(packet.title, specGoal)}\n\n${GROUNDED_WORKER_CONTRACT}`,
         },
-        allowedTools: [...decision.tools],
+        allowedTools: [...decision.tools, ...MEMORY_MCP_TOOLS],
+        mcpServers: memoryMcpServerConfig(opts.cwd),
         permissionMode: opts.permissionMode ?? "bypassPermissions",
         ...base,
       } as never,

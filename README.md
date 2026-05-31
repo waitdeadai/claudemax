@@ -334,6 +334,7 @@ cmax init                                  # install skills + hooks into a proje
 - [Workflow variants](./docs/WORKFLOW_VARIANTS.md)
 - [Skill catalog (29 active + 1 deprecated stub)](./docs/SKILL_CATALOG.md)
 - [Taste auto-bootstrap](./docs/TASTE_AUTOBOOTSTRAP.md)
+- [Grounding layer (memory MCP + vault compile)](./docs/grounding-layer.md)
 - [v1 → v2 migration](./docs/V1_TO_V2_MIGRATION.md)
 - [Quickstart](./docs/QUICKSTART.md)
 

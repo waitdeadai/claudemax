@@ -26,6 +26,9 @@ importers:
       '@claudemax/core':
         specifier: workspace:*
         version: link:../core
+      '@claudemax/grounding':
+        specifier: workspace:*
+        version: link:../grounding
       '@claudemax/memory':
         specifier: workspace:*
         version: link:../memory
@@ -62,11 +65,61 @@ importers:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.19)(tsx@4.22.3)
 
+  packages/grounding:
+    dependencies:
+      '@claudemax/memory':
+        specifier: workspace:*
+        version: link:../memory
+      better-sqlite3:
+        specifier: ^12.10.0
+        version: 12.10.0
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.0
+        version: 7.6.13
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.19
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.19)(tsx@4.22.3)
+
   packages/memory:
     dependencies:
       better-sqlite3:
         specifier: ^12.10.0
         version: 12.10.0
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.0
+        version: 7.6.13
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.19
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.19)(tsx@4.22.3)
+
+  packages/memory-mcp:
+    dependencies:
+      '@claudemax/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@4.4.3)
+      better-sqlite3:
+        specifier: ^12.10.0
+        version: 12.10.0
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.0

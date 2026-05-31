@@ -2,6 +2,8 @@
 // Keeps every query() call site consistent with the May 2026 Claude Agent SDK
 // surface and the Opus 4.8 behavior (effort ladder + adaptive thinking).
 
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ModelTier } from "@claudemax/core";
 import { MODELS } from "@claudemax/core";
 
@@ -174,6 +176,44 @@ export function extractStructuredOutput(
     }
   }
   return null;
+}
+
+// The four read-only tools exposed by @claudemax/memory-mcp, surfaced under the
+// "memory" server name → mcp__memory__<tool>. Appended to allowedTools at the
+// Mode A spawn sites (orchestrator.ts, goal.ts) so the worker can ground itself.
+export const MEMORY_MCP_TOOLS: readonly string[] = [
+  "mcp__memory__memory_search",
+  "mcp__memory__memory_get_decision",
+  "mcp__memory__memory_get_fact",
+  "mcp__memory__memory_stale",
+];
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// runtime dist lives at packages/runtime/dist/; the MCP entry is at
+// packages/memory-mcp/dist/index.js. Resolve relative to THIS module's compiled
+// location (same technique orchestrator-multi.ts uses for CLI_BIN) so both Mode A
+// spawn sites share one source of truth for the path with no drift.
+const MEMORY_MCP_ENTRY = resolve(__dirname, "..", "..", "memory-mcp", "dist", "index.js");
+
+// Inline stdio mcpServers block for the read-only memory MCP, for Mode A SDK
+// subagent query() calls (orchestrator.ts, goal.ts). Mode B teammates inherit
+// the server from the committed .mcp.json instead. Resolving the absolute entry
+// path here (not a relative one) avoids the cwd mismatch between Claude Code and
+// the SDK. The DB path follows the same env-or-default contract as the hook and
+// .mcp.json: CLAUDEMAX_DB, else <cwd>/.claudemax/memory.sqlite.
+export function memoryMcpServerConfig(
+  cwd?: string,
+): Record<string, unknown> {
+  const dbPath =
+    process.env["CLAUDEMAX_DB"] ?? resolve(cwd ?? process.cwd(), ".claudemax", "memory.sqlite");
+  return {
+    memory: {
+      type: "stdio",
+      command: "node",
+      args: [MEMORY_MCP_ENTRY],
+      env: { CLAUDEMAX_DB: dbPath },
+    },
+  };
 }
 
 export function parseUsageWithCache(usage: unknown): CacheTokenStats {

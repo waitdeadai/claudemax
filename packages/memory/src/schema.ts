@@ -112,6 +112,28 @@ CREATE TABLE IF NOT EXISTS sub_specs (
   evidence_json TEXT
 );
 
+CREATE TABLE IF NOT EXISTS project_facts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  scope TEXT NOT NULL DEFAULT '**',
+  status TEXT NOT NULL DEFAULT 'proposed',
+  invariant INTEGER NOT NULL DEFAULT 0,
+  confidence INTEGER NOT NULL DEFAULT 3,
+  source TEXT,
+  source_path TEXT,
+  tags TEXT,
+  ttl_days INTEGER,
+  run_id TEXT,
+  lane_id TEXT,
+  user_id TEXT,
+  app_id TEXT,
+  last_verified_at TEXT,
+  verified_count INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (key, scope)
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS mem_fts USING fts5(
   source UNINDEXED,
   rowid_ref UNINDEXED,
@@ -129,6 +151,8 @@ CREATE INDEX IF NOT EXISTS idx_runs_ts ON runs(ts);
 CREATE INDEX IF NOT EXISTS idx_research_topic ON research_sources(topic);
 CREATE INDEX IF NOT EXISTS idx_taste_kind ON taste_history(kind);
 CREATE INDEX IF NOT EXISTS idx_subspecs_run ON sub_specs(run_id);
+CREATE INDEX IF NOT EXISTS idx_project_facts_key ON project_facts(key);
+CREATE INDEX IF NOT EXISTS idx_project_facts_status ON project_facts(status);
 
 -- Indexes on columns added by migrate() (agent_id, parent_agent_id, lane_id,
 -- run_id, last_verified_at) are NOT created here. SCHEMA_SQL runs BEFORE

@@ -15,6 +15,20 @@ export const MEMORY_TOOL_RULE = `Memory policy (read before acting):
 - If you apply a recalled row and it turns out correct, mark it \`cmax memory verify <source>#<id> --by <agent-name>\` so it doesn't go stale.
 - The host process may also expose Anthropic's file-based Memory tool at /.claudemax/agent-memory/<agent-id>/. Treat that as scratch; treat the SQLite memory (cmax memory ...) as durable cross-session truth.`;
 
+// Grounding contract prepended to every sub-Spec leaf spawn (Mode A SDK
+// subagents via orchestrator.ts/goal.ts; Mode B Agent Teams teammate prompts).
+// Mirrors .claude/agents/grounded-worker.md so a fresh worker grounds against
+// the read-only memory MCP before inventing project facts. The no-vibes /
+// no-fake-recall / no-fake-cite dark-patterns hooks enforce what this states;
+// freshness-gate.sh dates it. Tool names match the registered MCP server
+// ("memory") so they surface as mcp__memory__<tool>.
+export const GROUNDED_WORKER_CONTRACT = `Grounding contract (read before asserting any project fact):
+- The lead's conversation history does NOT carry over. Anything you must treat as true lives in a durable, addressable artifact — your sub-Spec, CLAUDE.md, or the memory store — never in chat.
+- Before asserting a project fact (a tool, convention, path, or prior decision), query memory scoped to your leaf's directory: \`mcp__memory__memory_search\` (ranked hits across decisions + facts + fixes), \`mcp__memory__memory_get_decision\` (one ADR by slug), \`mcp__memory__memory_get_fact\` (best fact for a key; most-specific scope wins). Pull only the slice this leaf needs — there is no dump-all tool by design.
+- If a fact is NOT in your sub-Spec, CLAUDE.md, or memory, it is an ASSUMPTION. Label it explicitly with an "ASSUMPTION:" prefix; never invent project facts to make a task look complete.
+- If \`mcp__memory__memory_stale\` flags something you need, or a result carries \`stale: true\` / a high \`ageDays\`, re-verify against the live source before trusting it. Age is part of the truth.
+- You may PROPOSE new truth via \`cmax memory propose-decision\` / \`cmax memory propose-fact\` — both land as \`status=proposed\`. A human blesses it in the vault and \`cmax ground compile\` promotes it to \`accepted\`. You never self-bless.`;
+
 // Per-lane features-checklist rule. Source: anthropic.com/engineering/
 // effective-harnesses-for-long-running-agents (2025-11-26) — coding agent
 // reads progress file + git log, picks ONE failing feature, implements,

@@ -254,5 +254,96 @@ export function memoryCommand(): Command {
       console.log(n > 0 ? kleur.green(`  drained ${n} envelope(s)`) : kleur.dim("  (queue empty)"));
     });
 
+  cmd
+    .command("propose-decision")
+    .description(
+      "Append a PROPOSED decision (status=proposed). A human blesses it in the vault; `cmax ground compile` promotes it to accepted. Agents never self-bless.",
+    )
+    .requiredOption("--slug <s>", "stable address, e.g. auth-passkeys")
+    .requiredOption("--title <t>", "short title")
+    .requiredOption("--decision <d>", "what we decided")
+    .option("--rationale <r>", "why")
+    .option("--scope <glob>", "path glob this applies to", "**")
+    .option("--invariant", "mark for promotion into the CLAUDE.md managed block")
+    .option("--ttl-days <n>", "per-row staleness-window override (days)")
+    .option("--tags <csv>", "comma-separated tags")
+    .option("--path <path>", "memory db path", ".claudemax/memory.sqlite")
+    .action(
+      (opts: {
+        slug: string;
+        title: string;
+        decision: string;
+        rationale?: string;
+        scope: string;
+        invariant?: boolean;
+        ttlDays?: string;
+        tags?: string;
+        path: string;
+      }) => {
+        const m = new MemoryStore({ path: resolve(process.cwd(), opts.path) });
+        const id = m.proposeDecision({
+          slug: opts.slug,
+          title: opts.title,
+          decision: opts.decision,
+          rationale: opts.rationale,
+          scope: opts.scope,
+          invariant: Boolean(opts.invariant),
+          ttlDays: opts.ttlDays !== undefined ? Number(opts.ttlDays) : undefined,
+          tags: opts.tags ? opts.tags.split(",").map((t) => t.trim()) : undefined,
+        });
+        m.close();
+        console.log(kleur.green(`  proposed → decisions#${id}: ${opts.title}`));
+      },
+    );
+
+  cmd
+    .command("propose-fact")
+    .description(
+      "Append a PROPOSED project fact (status=proposed). A human blesses it in the vault; `cmax ground compile` promotes it to accepted. Agents never self-bless.",
+    )
+    .requiredOption("--key <k>", "addressable key, e.g. db.migrations.tool")
+    .requiredOption("--value <v>", "the fact body")
+    .option("--scope <glob>", "path glob this applies to", "**")
+    .option("--confidence <1-5>", "confidence 1..5")
+    .option("--invariant", "mark for promotion into the CLAUDE.md managed block")
+    .option("--ttl-days <n>", "per-row staleness-window override (days)")
+    .option("--source <s>", "provenance (URL / commit / note)")
+    .option("--tags <csv>", "comma-separated tags")
+    .option("--path <path>", "memory db path", ".claudemax/memory.sqlite")
+    .action(
+      (opts: {
+        key: string;
+        value: string;
+        scope: string;
+        confidence?: string;
+        invariant?: boolean;
+        ttlDays?: string;
+        source?: string;
+        tags?: string;
+        path: string;
+      }) => {
+        if (opts.confidence !== undefined) {
+          const c = Number(opts.confidence);
+          if (!Number.isInteger(c) || c < 1 || c > 5) {
+            console.error(kleur.red(`error: --confidence must be an integer in 1..5`));
+            process.exit(2);
+          }
+        }
+        const m = new MemoryStore({ path: resolve(process.cwd(), opts.path) });
+        const id = m.proposeFact({
+          key: opts.key,
+          value: opts.value,
+          scope: opts.scope,
+          confidence: opts.confidence !== undefined ? Number(opts.confidence) : undefined,
+          invariant: Boolean(opts.invariant),
+          ttlDays: opts.ttlDays !== undefined ? Number(opts.ttlDays) : undefined,
+          source: opts.source,
+          tags: opts.tags ? opts.tags.split(",").map((t) => t.trim()) : undefined,
+        });
+        m.close();
+        console.log(kleur.green(`  proposed → project_facts#${id}: ${opts.key}`));
+      },
+    );
+
   return cmd;
 }

@@ -1,0 +1,55 @@
+{
+  "name": "@claudemax/memory-mcp",
+  "version": "0.2.0",
+  "description": "claudemax read-only MCP server over memory.sqlite — grounds Mode A SDK subagents and Mode B Agent Teams identically against the persistent decision/fact store.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "claudemax-memory-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@claudemax/memory": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "better-sqlite3": "^12.10.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waitdeadai/claudemax",
+    "directory": "packages/memory-mcp"
+  },
+  "homepage": "https://github.com/waitdeadai/claudemax/tree/main/packages/memory-mcp#readme",
+  "bugs": "https://github.com/waitdeadai/claudemax/issues",
+  "keywords": ["claudemax", "memory", "mcp", "model-context-protocol", "sqlite", "grounding"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -4,6 +4,31 @@ claudemax does not bundle MCP servers (they're heavy and use-case-specific). Ins
 
 The runtime passes `mcpServers` through to `query()` automatically once you add it to settings — no claudemax-side wiring needed.
 
+## The one bundled exception: the first-party `memory` server
+
+The grounding layer ships a single read-only MCP server, `@claudemax/memory-mcp`, that wraps `.claudemax/memory.sqlite` so a fresh subagent (Mode A SDK subagent *or* Mode B Agent Teams teammate) can ground itself against accepted decisions and project facts. It is **pre-registered for both modes**:
+
+- **Claude Code / Mode B**: in the committed `.mcp.json` at repo root (project scope, team-shared). The Agent SDK inherits it because `baseSdkOptions()` sets `settingSources: ["user", "project"]`. Note: project-scoped `.mcp.json` servers need one-time approval in Claude Code (`claude mcp list` shows pending).
+- **Mode A SDK subagents**: passed inline via the `mcpServers` option in `orchestrator.ts` / `goal.ts` (`memoryMcpServerConfig()` in `sdk-options.ts` resolves the absolute dist path), so Mode A grounding is deterministic and never relies on the approval gate.
+
+```json5
+// .mcp.json (repo root — committed)
+{
+  "mcpServers": {
+    "memory": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CLAUDE_PROJECT_DIR}/packages/memory-mcp/dist/index.js"],
+      "env": { "CLAUDEMAX_DB": "${CLAUDE_PROJECT_DIR:-.}/.claudemax/memory.sqlite" }
+    }
+  }
+}
+```
+
+It exposes exactly four tools — `mcp__memory__memory_search`, `mcp__memory__memory_get_decision`, `mcp__memory__memory_get_fact`, `mcp__memory__memory_stale` — and there is **no `dump_all` tool by design** (retrieval-on-demand, never context flooding). See [`docs/grounding-layer.md`](./grounding-layer.md).
+
+The servers below are the *unbundled* ones — drop them into `.claude/settings.json` yourself.
+
 ## How to add an MCP server
 
 ```json5

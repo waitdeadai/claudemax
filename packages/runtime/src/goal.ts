@@ -1,11 +1,13 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { spawn } from "node:child_process";
 import { MODELS, modelById, type ModelId, type Spec } from "@claudemax/core";
-import { GOAL_DRIVER_SYSTEM } from "./prompts.js";
+import { GOAL_DRIVER_SYSTEM, GROUNDED_WORKER_CONTRACT } from "./prompts.js";
 import {
   baseSdkOptions,
   buildOtelEnv,
   estimateTaskBudgetTokens,
+  memoryMcpServerConfig,
+  MEMORY_MCP_TOOLS,
   parseUsageWithCache,
   type EffortLevel,
 } from "./sdk-options.js";
@@ -91,7 +93,7 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
-        append: GOAL_DRIVER_SYSTEM(spec),
+        append: `${GOAL_DRIVER_SYSTEM(spec)}\n\n${GROUNDED_WORKER_CONTRACT}`,
       },
       allowedTools: [
         "Read",
@@ -103,7 +105,9 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
         "WebSearch",
         "WebFetch",
         "Agent",
+        ...MEMORY_MCP_TOOLS,
       ],
+      mcpServers: memoryMcpServerConfig(opts.cwd),
       permissionMode: opts.permissionMode ?? "bypassPermissions",
       resume: opts.resume,
       ...base,

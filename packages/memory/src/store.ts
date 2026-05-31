@@ -9,6 +9,18 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { SCHEMA_SQL } from "./schema.js";
+import {
+  GROUNDING_SELECT_DECISION_BY_SLUG,
+  GROUNDING_SELECT_FACTS_BY_KEY,
+  GROUNDING_SELECT_STALE_DECISIONS,
+  GROUNDING_SELECT_STALE_FACTS,
+  computeAgeDays,
+  globMatches,
+  globSpecificity,
+  isStale as isStaleRaw,
+  type RawDecisionRow,
+  type RawFactRow,
+} from "./grounding-queries.js";
 
 export interface MemoryStoreOptions {
   readonly path: string;
@@ -156,6 +168,91 @@ export interface RecallOptions {
   readonly scope?: MultiScope;
 }
 
+// ===== Grounding layer (decisions + project_facts) =====
+
+export type GroundingStatus = "proposed" | "accepted" | "superseded" | "deprecated";
+
+export interface DecisionRow {
+  readonly id: number;
+  readonly ts: string;
+  readonly topic: string;
+  readonly decision: string;
+  readonly rationale: string;
+  readonly slug: string | null;
+  readonly status: string;
+  readonly scope: string;
+  readonly invariant: boolean;
+  readonly ttlDays: number | null;
+  readonly sourcePath: string | null;
+  readonly tags: string | null;
+  readonly lastVerifiedAt: string | null;
+  readonly verifiedCount: number;
+  readonly ageDays: number | null;
+  readonly stale: boolean;
+}
+
+export interface FactRow {
+  readonly id: number;
+  readonly ts: string;
+  readonly key: string;
+  readonly value: string;
+  readonly scope: string;
+  readonly status: string;
+  readonly invariant: boolean;
+  readonly confidence: number;
+  readonly source: string | null;
+  readonly sourcePath: string | null;
+  readonly tags: string | null;
+  readonly ttlDays: number | null;
+  readonly lastVerifiedAt: string | null;
+  readonly verifiedCount: number;
+  readonly ageDays: number | null;
+  readonly stale: boolean;
+}
+
+export interface StaleRow {
+  readonly kind: "decision" | "fact";
+  readonly ref: string;
+  readonly addressable: string;
+  readonly ageDays: number;
+  readonly ttlDays: number;
+}
+
+export interface GroundingHit {
+  readonly source: string;
+  readonly rowidRef: number;
+  readonly title: string;
+  readonly snippet: string;
+  readonly ageDays: number | null;
+  readonly stale: boolean;
+}
+
+export type GroundingKind = "decision" | "fact" | "fix" | "all";
+
+export interface ProposeDecisionInput extends MultiScope {
+  readonly slug: string;
+  readonly title: string;
+  readonly decision: string;
+  readonly rationale?: string;
+  readonly scope?: string;
+  readonly invariant?: boolean;
+  readonly ttlDays?: number;
+  readonly sourcePath?: string;
+  readonly tags?: readonly string[];
+}
+
+export interface ProposeFactInput extends MultiScope {
+  readonly key: string;
+  readonly value: string;
+  readonly scope?: string;
+  readonly confidence?: number;
+  readonly invariant?: boolean;
+  readonly source?: string;
+  readonly sourcePath?: string;
+  readonly ttlDays?: number;
+  readonly tags?: readonly string[];
+}
+
 export class MemoryStore {
   private readonly db: Database.Database;
 
@@ -196,6 +293,13 @@ export class MemoryStore {
       ["decisions", "app_id", "TEXT"],
       ["decisions", "last_verified_at", "TEXT"],
       ["decisions", "verified_count", "INTEGER NOT NULL DEFAULT 0"],
+      ["decisions", "slug", "TEXT"],
+      ["decisions", "status", "TEXT DEFAULT 'proposed'"],
+      ["decisions", "scope", "TEXT DEFAULT '**'"],
+      ["decisions", "invariant", "INTEGER NOT NULL DEFAULT 0"],
+      ["decisions", "ttl_days", "INTEGER"],
+      ["decisions", "source_path", "TEXT"],
+      ["decisions", "tags", "TEXT"],
       ["errors_solutions", "run_id", "TEXT"],
       ["errors_solutions", "lane_id", "TEXT"],
       ["errors_solutions", "user_id", "TEXT"],
@@ -230,6 +334,8 @@ export class MemoryStore {
       `CREATE INDEX IF NOT EXISTS idx_runs_verified ON runs(last_verified_at)`,
       `CREATE INDEX IF NOT EXISTS idx_decisions_verified ON decisions(last_verified_at)`,
       `CREATE INDEX IF NOT EXISTS idx_errors_verified ON errors_solutions(last_verified_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_decisions_slug ON decisions(slug)`,
+      `CREATE INDEX IF NOT EXISTS idx_decisions_status ON decisions(status)`,
     ];
     for (const sql of indexes) {
       try {
@@ -750,6 +856,252 @@ export class MemoryStore {
     if (scope?.runId && row.runId !== scope.runId) return null;
     return row;
   }
+
+  // ===== Grounding read methods (the surface the read-only MCP wraps) =====
+
+  // Most-recent accepted decision for a slug. Computes ageDays from
+  // last_verified_at and flags stale past ttl_days (or DEFAULT_STALE_AFTER_DAYS).
+  getDecisionBySlug(slug: string): DecisionRow | null {
+    const row = this.db.prepare(GROUNDING_SELECT_DECISION_BY_SLUG).get(slug) as
+      | RawDecisionRow
+      | undefined;
+    if (!row) return null;
+    return mapDecisionRow(row);
+  }
+
+  // Best accepted fact for a key under a querying scope. Most-specific glob wins:
+  // among accepted rows whose scope glob matches `scope`, the longest non-'**'
+  // matching glob is preferred; '**' is the fallback.
+  getFact(key: string, scope?: string): FactRow | null {
+    const rows = this.db.prepare(GROUNDING_SELECT_FACTS_BY_KEY).all(key) as RawFactRow[];
+    if (rows.length === 0) return null;
+    const querying = scope ?? "**";
+    let best: RawFactRow | null = null;
+    let bestSpecificity = -1;
+    for (const r of rows) {
+      const glob = r.scope ?? "**";
+      if (!globMatches(glob, querying)) continue;
+      const specificity = globSpecificity(glob);
+      if (specificity > bestSpecificity) {
+        best = r;
+        bestSpecificity = specificity;
+      }
+    }
+    if (!best) return null;
+    return mapFactRow(best);
+  }
+
+  // Accepted invariant rows (decisions + facts) past their staleness window.
+  // Reuses last_verified_at; ttl_days overrides the default window per-row.
+  // Replaces the spec's stale_truth SQL view with a TS method.
+  staleTruth(scope?: string): readonly StaleRow[] {
+    const out: StaleRow[] = [];
+    const decisions = this.db.prepare(GROUNDING_SELECT_STALE_DECISIONS).all() as RawDecisionRow[];
+    for (const d of decisions) {
+      if (scope && !globMatches(d.scope ?? "**", scope)) continue;
+      const ageDays = computeAgeDays(d.last_verified_at);
+      const ttlDays = d.ttl_days ?? DEFAULT_STALE_AFTER_DAYS;
+      if (ageDays === null || ageDays <= ttlDays) continue;
+      out.push({
+        kind: "decision",
+        ref: `decisions#${d.id}`,
+        addressable: d.slug ?? String(d.id),
+        ageDays,
+        ttlDays,
+      });
+    }
+    const facts = this.db.prepare(GROUNDING_SELECT_STALE_FACTS).all() as RawFactRow[];
+    for (const f of facts) {
+      if (scope && !globMatches(f.scope ?? "**", scope)) continue;
+      const ageDays = computeAgeDays(f.last_verified_at);
+      const ttlDays = f.ttl_days ?? DEFAULT_STALE_AFTER_DAYS;
+      if (ageDays === null || ageDays <= ttlDays) continue;
+      out.push({
+        kind: "fact",
+        ref: `project_facts#${f.id}`,
+        addressable: f.key,
+        ageDays,
+        ttlDays,
+      });
+    }
+    return out;
+  }
+
+  // Lighter scoped/capped FTS hit list for the MCP's memory_search. Routes the
+  // free-text query through sanitizeFtsQuery (FTS5 MATCH injection guard), filters
+  // mem_fts to the grounding sources, then enriches each hit with ageDays/stale.
+  // Does NOT duplicate recall() scoring.
+  searchGrounding(
+    query: string,
+    kind: GroundingKind = "all",
+    scope?: string,
+    limit = 8,
+  ): readonly GroundingHit[] {
+    const ftsQuery = sanitizeFtsQuery(query);
+    if (!ftsQuery) return [];
+    const cap = Math.max(1, Math.min(limit, 25));
+    const sources = groundingSourcesForKind(kind);
+    const placeholders = sources.map(() => "?").join(", ");
+    const rows = this.db
+      .prepare(
+        `SELECT source, rowid_ref AS rowidRef, title,
+                snippet(mem_fts, 3, '«', '»', '…', 16) AS snippet
+         FROM mem_fts
+         WHERE mem_fts MATCH ? AND source IN (${placeholders})
+         ORDER BY bm25(mem_fts)
+         LIMIT ?`,
+      )
+      .all(ftsQuery, ...sources, cap * 3) as Array<{
+      source: string;
+      rowidRef: number;
+      title: string;
+      snippet: string;
+    }>;
+
+    const hits: GroundingHit[] = [];
+    for (const r of rows) {
+      if (hits.length >= cap) break;
+      const meta = this.fetchGroundingMeta(r.source, r.rowidRef);
+      if (scope && meta && meta.scope && !globMatches(meta.scope, scope)) continue;
+      hits.push({
+        source: r.source,
+        rowidRef: r.rowidRef,
+        title: r.title,
+        snippet: r.snippet,
+        ageDays: meta ? meta.ageDays : null,
+        stale: meta ? meta.stale : false,
+      });
+    }
+    return hits;
+  }
+
+  // ===== Grounding write helpers (append path; status='proposed') =====
+
+  // Agents PROPOSE; humans bless. Inserts a proposed decision, sets
+  // last_verified_at = now, indexes into mem_fts. Never accepts/blesses.
+  proposeDecision(input: ProposeDecisionInput): number {
+    const fresh = nowSqliteIso();
+    const tags = input.tags && input.tags.length > 0 ? input.tags.join(",") : null;
+    const stmt = this.db.prepare(
+      `INSERT INTO decisions
+         (topic, decision, rationale, slug, status, scope, invariant, ttl_days, source_path, tags,
+          run_id, lane_id, user_id, app_id, last_verified_at, verified_count)
+       VALUES (?, ?, ?, ?, 'proposed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+    );
+    const r = stmt.run(
+      input.title,
+      input.decision,
+      input.rationale ?? "",
+      input.slug,
+      input.scope ?? "**",
+      input.invariant ? 1 : 0,
+      input.ttlDays ?? null,
+      input.sourcePath ?? null,
+      tags,
+      input.runId ?? null,
+      input.laneId ?? null,
+      input.userId ?? null,
+      input.appId ?? null,
+      fresh,
+    );
+    const rowid = Number(r.lastInsertRowid);
+    this.indexFts(
+      "decisions",
+      rowid,
+      input.title,
+      `${input.decision}\n${input.rationale ?? ""}`,
+    );
+    return rowid;
+  }
+
+  // Inserts a proposed fact (UNIQUE(key,scope) → upsert keeps it proposed),
+  // sets last_verified_at = now, indexes into mem_fts. Never accepts/blesses.
+  proposeFact(input: ProposeFactInput): number {
+    const fresh = nowSqliteIso();
+    const tags = input.tags && input.tags.length > 0 ? input.tags.join(",") : null;
+    const scope = input.scope ?? "**";
+    const confidence = clampConfidence(input.confidence ?? 3);
+    const stmt = this.db.prepare(
+      `INSERT INTO project_facts
+         (key, value, scope, status, invariant, confidence, source, source_path, tags, ttl_days,
+          run_id, lane_id, user_id, app_id, last_verified_at, verified_count)
+       VALUES (?, ?, ?, 'proposed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+       ON CONFLICT(key, scope) DO UPDATE SET
+         value = excluded.value,
+         status = 'proposed',
+         invariant = excluded.invariant,
+         confidence = excluded.confidence,
+         source = excluded.source,
+         source_path = excluded.source_path,
+         tags = excluded.tags,
+         ttl_days = excluded.ttl_days,
+         last_verified_at = excluded.last_verified_at`,
+    );
+    const r = stmt.run(
+      input.key,
+      input.value,
+      scope,
+      input.invariant ? 1 : 0,
+      confidence,
+      input.source ?? null,
+      input.sourcePath ?? null,
+      tags,
+      input.ttlDays ?? null,
+      input.runId ?? null,
+      input.laneId ?? null,
+      input.userId ?? null,
+      input.appId ?? null,
+      fresh,
+    );
+    let rowid = Number(r.lastInsertRowid);
+    if (r.changes === 0 || rowid === 0) {
+      const existing = this.db
+        .prepare(`SELECT id FROM project_facts WHERE key = ? AND scope = ?`)
+        .get(input.key, scope) as { id: number } | undefined;
+      rowid = existing?.id ?? rowid;
+    }
+    this.indexFts("project_facts", rowid, input.key, input.value);
+    return rowid;
+  }
+
+  // Scope + verification meta for a grounding row, with computed ageDays/stale.
+  private fetchGroundingMeta(
+    source: string,
+    rowidRef: number,
+  ): { readonly scope: string | null; readonly ageDays: number | null; readonly stale: boolean } | null {
+    if (source === "decisions") {
+      const row = this.db
+        .prepare(
+          `SELECT scope, ttl_days AS ttlDays, last_verified_at AS lastVerifiedAt
+           FROM decisions WHERE id = ?`,
+        )
+        .get(rowidRef) as
+        | { scope: string | null; ttlDays: number | null; lastVerifiedAt: string | null }
+        | undefined;
+      if (!row) return null;
+      const ageDays = computeAgeDays(row.lastVerifiedAt);
+      return { scope: row.scope, ageDays, stale: isStale(ageDays, row.ttlDays) };
+    }
+    if (source === "project_facts") {
+      const row = this.db
+        .prepare(
+          `SELECT scope, ttl_days AS ttlDays, last_verified_at AS lastVerifiedAt
+           FROM project_facts WHERE id = ?`,
+        )
+        .get(rowidRef) as
+        | { scope: string | null; ttlDays: number | null; lastVerifiedAt: string | null }
+        | undefined;
+      if (!row) return null;
+      const ageDays = computeAgeDays(row.lastVerifiedAt);
+      return { scope: row.scope, ageDays, stale: isStale(ageDays, row.ttlDays) };
+    }
+    const row = this.db
+      .prepare(`SELECT last_verified_at AS lastVerifiedAt FROM ${source} WHERE id = ?`)
+      .get(rowidRef) as { lastVerifiedAt: string | null } | undefined;
+    if (!row) return null;
+    const ageDays = computeAgeDays(row.lastVerifiedAt);
+    return { scope: null, ageDays, stale: isStale(ageDays, null) };
+  }
 }
 
 // Tables that carry multi-scope + verification columns. research_sources,
@@ -814,4 +1166,73 @@ function startOfMonthIso(): string {
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   return start.toISOString().slice(0, 19).replace("T", " ");
+}
+
+// 2-arg staleness using the module default window, so call sites stay terse.
+function isStale(ageDays: number | null, ttlDays: number | null): boolean {
+  return isStaleRaw(ageDays, ttlDays, DEFAULT_STALE_AFTER_DAYS);
+}
+
+function clampConfidence(c: number): number {
+  if (!Number.isFinite(c)) return 3;
+  return Math.max(1, Math.min(5, Math.round(c)));
+}
+
+// mem_fts.source strings the grounding kinds map to. Must match the strings
+// passed to indexFts() at write time, or filtering silently returns no hits.
+function groundingSourcesForKind(kind: GroundingKind): readonly string[] {
+  switch (kind) {
+    case "decision":
+      return ["decisions"];
+    case "fact":
+      return ["project_facts"];
+    case "fix":
+      return ["errors_solutions"];
+    default:
+      return ["decisions", "project_facts", "errors_solutions"];
+  }
+}
+
+function mapDecisionRow(row: RawDecisionRow): DecisionRow {
+  const ageDays = computeAgeDays(row.last_verified_at);
+  return {
+    id: row.id,
+    ts: row.ts,
+    topic: row.topic,
+    decision: row.decision,
+    rationale: row.rationale,
+    slug: row.slug,
+    status: row.status,
+    scope: row.scope ?? "**",
+    invariant: row.invariant === 1,
+    ttlDays: row.ttl_days,
+    sourcePath: row.source_path,
+    tags: row.tags,
+    lastVerifiedAt: row.last_verified_at,
+    verifiedCount: row.verified_count,
+    ageDays,
+    stale: isStale(ageDays, row.ttl_days),
+  };
+}
+
+function mapFactRow(row: RawFactRow): FactRow {
+  const ageDays = computeAgeDays(row.last_verified_at);
+  return {
+    id: row.id,
+    ts: row.ts,
+    key: row.key,
+    value: row.value,
+    scope: row.scope ?? "**",
+    status: row.status,
+    invariant: row.invariant === 1,
+    confidence: row.confidence,
+    source: row.source,
+    sourcePath: row.source_path,
+    tags: row.tags,
+    ttlDays: row.ttl_days,
+    lastVerifiedAt: row.last_verified_at,
+    verifiedCount: row.verified_count,
+    ageDays,
+    stale: isStale(ageDays, row.ttl_days),
+  };
 }
