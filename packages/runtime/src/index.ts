@@ -3,6 +3,7 @@ export * from "./goal.js";
 export * from "./verify.js";
 export * from "./verdict-artifact.js";
 export * from "./mutation-verify.js";
+export * from "./prc.js";
 export * from "./spec-writer.js";
 export * from "./prompts.js";
 export * from "./billing.js";

@@ -21,6 +21,15 @@ For the spec as a whole:
 - constraints listed if non-trivial.
 - evidenceRequired enumerated.
 
+## Production-Readiness Contract (PRC)
+
+By default the spec inherits the PRC conditions (`prc-*`) that `multispec decompose`
+auto-appends — production-ready, not MVP, is the bar (see
+`vault/decisions/production-readiness-contract.md`). Treat `prc-*` like any other
+condition: each must keep its mechanical verifyHint. Do NOT flag them as redundant
+or strip them — a spec that has dropped the PRC conditions without `--mvp` is itself
+a /specqa **fail**. `--mvp` is the only sanctioned way to omit them.
+
 ## Output
 
 ```

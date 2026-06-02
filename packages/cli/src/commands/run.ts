@@ -49,6 +49,7 @@ export function runCommand(): Command {
     .option("--mode <mode>", "auto | solo | teams (parallelism mode)", "auto")
     .option("--no-research", "skip /deepresearch (smaller / simpler goals)")
     .option("--no-verify", "skip independent verification step")
+    .option("--mvp", "opt out of the production-ready bar (PRC): sub-Specs keep only their explicit completion conditions — MVP is the exception, not the default", false)
     .option("--tdd", "enforce write-failing-test-first cycle per sub-Spec where a test verifyHint exists", false)
     .option("--confidence <n>", "verifier confidence threshold for primary findings (0..1)", "0.8")
     .option("--adversarial", "adversarial verify: stress-test the blind verifier with fabricated-claim mutants + isomorphic restatement, and downgrade any condition it can be fooled about", false)
@@ -65,6 +66,7 @@ export function runCommand(): Command {
           mode: Mode;
           research: boolean;
           verify: boolean;
+          mvp: boolean;
           tdd: boolean;
           confidence: string;
           adversarial: boolean;
@@ -124,7 +126,7 @@ export function runCommand(): Command {
 
           phase = "decompose";
           console.log(kleur.cyan("→ phase 2/5  multispec decompose"));
-          const multispec = await decomposeIntoMultiSpec(goal, { cwd, researchBrief: brief });
+          const multispec = await decomposeIntoMultiSpec(goal, { cwd, researchBrief: brief, mvp: opts.mvp });
           const specPath = resolve(cwd, opts.out);
           const rootSpec: Spec = {
             title: multispec.rootGoal,
