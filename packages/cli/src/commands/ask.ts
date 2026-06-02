@@ -21,7 +21,7 @@ export function askCommand(): Command {
   // Reuse run's action but expose it under the friendlier verb.
   // We construct a fresh Command with the same surface to avoid mutating run.
   const cmd = new Command("ask")
-    .description("Describe your goal. claudemax does deepresearch + multispec + parallel /goal + verify. Power-user entry point.")
+    .description("Describe your goal → production-ready, autonomously. deepresearch + multispec + parallel /goal + decomposed evidence-gated verify, hardened by default (PRC + SSC + adversarial). Lighten with --mvp / --no-ssc / --no-adversarial.")
     .argument("<goal>", "what you want to ship, in quotes")
     .option("--out <path>", "where to write the root SPEC.md", "SPEC.md")
     .option("--max-turns <n>", "goal-loop turn budget per sub-Spec", "200")
@@ -36,6 +36,9 @@ export function askCommand(): Command {
     .option("--no-verify", "skip independent verification step")
     .option("--tdd", "enforce write-failing-test-first per sub-Spec where a test verifyHint exists", false)
     .option("--confidence <n>", "verifier confidence threshold for primary findings (0..1)", "0.8")
+    .option("--no-ssc", "disable Specification Self-Correction (ON by default — hardens each sub-Spec before execution)")
+    .option("--no-adversarial", "disable adversarial verify (ON by default — stress-tests the blind verifier with mutants + isomorphic restatement)")
+    .option("--mvp", "ship an MVP instead of production-ready (skips the PRC bar)", false)
     .option("--memory <path>", "memory db path", ".claudemax/memory.sqlite")
     .action(async (goal: string, opts: Record<string, unknown>) => {
       const cwd = process.cwd();
@@ -62,6 +65,13 @@ export function askCommand(): Command {
           String(opts["mode"] ?? "auto") +
           kleur.dim("        (auto-selects Mode A SDK subagents or Mode B Claude Code Agent Teams per spec shape)"),
       );
+      console.log(
+        kleur.cyan(`  bar:     `) +
+          (opts["mvp"] ? kleur.yellow("MVP (--mvp)") : kleur.green("production-ready (PRC)")) +
+          kleur.dim(
+            `   ssc=${opts["ssc"] === false ? "off" : "on"} adversarial=${opts["adversarial"] === false ? "off" : "on"}   (decomposed evidence-gated verify is the source of truth)`,
+          ),
+      );
       console.log();
 
       const runCmd = runCommand();
@@ -77,6 +87,12 @@ export function askCommand(): Command {
           if (k === "research" && v === false) argv.push("--no-research");
           else if (k === "verify" && v === false) argv.push("--no-verify");
           else if (k === "tdd" && v === true) argv.push("--tdd");
+          // ask hardens by default: ssc + adversarial are ON unless --no-ssc /
+          // --no-adversarial. run only understands the positive flags, so forward
+          // them only when true (a false value simply omits the flag).
+          else if (k === "ssc" && v === true) argv.push("--ssc");
+          else if (k === "adversarial" && v === true) argv.push("--adversarial");
+          else if (k === "mvp" && v === true) argv.push("--mvp");
         } else if (v !== undefined) {
           const flag = k.replace(/([A-Z])/g, "-$1").toLowerCase();
           argv.push(`--${flag}`, String(v));
