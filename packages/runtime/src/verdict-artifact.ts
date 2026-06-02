@@ -32,6 +32,16 @@ export interface VerdictConditionRow {
   readonly failureCategory?: string;
 }
 
+// Compact adversarial summary (Frente B.2) — recorded on the verdict when an
+// adversarial pass ran, so the gate/audit can see which conditions were
+// stress-tested and which were found gameable.
+export interface AdversarialSummaryRow {
+  readonly conditionId: string;
+  readonly rejectionRate: number;
+  readonly isomorphicStable: boolean;
+  readonly gameable: boolean;
+}
+
 export interface VerdictArtifact {
   readonly schema: string;
   readonly specHash: string;
@@ -45,6 +55,7 @@ export interface VerdictArtifact {
   readonly allConditionIds: readonly string[];
   readonly perCondition: readonly VerdictConditionRow[];
   readonly gate: VerdictGate;
+  readonly adversarial?: readonly AdversarialSummaryRow[];
 }
 
 // Stable hash of a spec's identity (goal + each condition's id/verifyHint). Lets
@@ -131,6 +142,7 @@ export interface BuildVerdictInput {
   readonly confidenceThreshold: number;
   readonly cwd: string;
   readonly now?: string;
+  readonly adversarial?: readonly AdversarialSummaryRow[];
 }
 
 export function buildVerdictArtifact(input: BuildVerdictInput): VerdictArtifact {
@@ -150,6 +162,7 @@ export function buildVerdictArtifact(input: BuildVerdictInput): VerdictArtifact 
     allConditionIds,
     perCondition: rows,
     gate,
+    ...(input.adversarial && input.adversarial.length ? { adversarial: input.adversarial } : {}),
   };
 }
 

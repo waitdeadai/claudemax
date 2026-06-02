@@ -17,6 +17,12 @@ import {
 import { runInteractiveVerify } from "./interactive-verify.js";
 import { judgeWithHaiku, type JudgeAction } from "./haiku-judge.js";
 import { clearActiveRunIfMatches, writeVerdict, type VerdictValue } from "./verdict-artifact.js";
+import { mapWithConcurrency, withTimeout } from "./concurrency.js";
+import {
+  adversarialVerify,
+  applyAdversarialDowngrade,
+  type AdversarialJudges,
+} from "./mutation-verify.js";
 
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.8;
 // Decomposed verify (Frente B.1): one blind Opus agent per completion condition,
@@ -42,6 +48,11 @@ export interface VerifyOptions {
   readonly perConditionMaxTurns?: number;
   // Persist the verdict artifact the Stop/SubagentStop gate reads (default ON).
   readonly writeArtifact?: boolean;
+  // Adversarial / mutation verify (Frente B.2, opt-in): stress-test the verifier
+  // against fabricated claims + an isomorphic restatement; downgrade any MET
+  // condition the verifier can be fooled about before computing the verdict.
+  readonly adversarial?: boolean;
+  readonly adversarialJudges?: AdversarialJudges; // injection point for tests
 }
 
 const FAILURE_CATEGORIES: readonly FailureCategory[] = [
@@ -142,18 +153,52 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
   // every declared condition gets a finding (a missing one is default-FAIL), and a
   // "met" with no evidence is downgraded to not-met.
   const complete = enforceEvidence(fillMissingConditions(spec, findings));
-  const { kept, suppressed } = partitionByConfidence(complete, threshold);
+
+  // Adversarial pass (Frente B.2, opt-in): a MET condition the verifier can be
+  // fooled about (accepts a fabricated claim, or flips under an equivalent
+  // restatement) is downgraded to not-met BEFORE the verdict is computed.
+  let adjudicated = complete;
+  let adversarialSummary: {
+    conditionId: string;
+    rejectionRate: number;
+    isomorphicStable: boolean;
+    gameable: boolean;
+  }[] = [];
+  if (opts.adversarial) {
+    const metIds = complete.filter((f) => f.met).map((f) => f.id);
+    if (metIds.length) {
+      const results = await adversarialVerify(spec, metIds, {
+        cwd,
+        env: opts.env,
+        effort: opts.effort,
+        ...(opts.adversarialJudges ? { judges: opts.adversarialJudges } : {}),
+      });
+      adjudicated = applyAdversarialDowngrade(complete, results);
+      adversarialSummary = results.map((r) => ({
+        conditionId: r.conditionId,
+        rejectionRate: r.rejectionRate,
+        isomorphicStable: r.isomorphicStable,
+        gameable: r.gameable,
+      }));
+    }
+  }
+
+  const { kept, suppressed } = partitionByConfidence(adjudicated, threshold);
   const consolidated = consolidateSimilar(kept);
-  const verdict = computeVerdictStrict(spec, complete, threshold);
+  const verdict = computeVerdictStrict(spec, adjudicated, threshold);
 
   const total = spec.completionConditions.length;
-  const passed = complete.filter(
+  const passed = adjudicated.filter(
     (f) => f.met && f.confidence >= threshold && f.evidence.trim() !== "",
   ).length;
-  const timedOut = complete.filter((f) => f.timedOut).length;
+  const timedOut = adjudicated.filter((f) => f.timedOut).length;
+  const gameableCount = adversarialSummary.filter((a) => a.gameable).length;
   const notes =
     `${passed}/${total} conditions verified-with-evidence` +
-    (timedOut ? `; ${timedOut} timed out` : "");
+    (timedOut ? `; ${timedOut} timed out` : "") +
+    (adversarialSummary.length
+      ? `; adversarial: ${gameableCount}/${adversarialSummary.length} flagged gameable`
+      : "");
 
   let report: VerificationReport = {
     spec,
@@ -168,11 +213,12 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
   if (opts.writeArtifact !== false) {
     const { path, artifact } = writeVerdict({
       spec,
-      allFindings: complete,
+      allFindings: adjudicated,
       verdict,
       verifierTier: "opus",
       confidenceThreshold: threshold,
       cwd,
+      ...(adversarialSummary.length ? { adversarial: adversarialSummary } : {}),
     });
     report = { ...report, verdictArtifactPath: path };
     // Only a fully-passing gate clears the active-run sentinel, and only when the
@@ -421,65 +467,9 @@ export function computeVerdictStrict(
   return "partial";
 }
 
-// ── Bounded-parallel runner + per-task wall-clock timeout ──
-
-export async function mapWithConcurrency<T, R>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let cursor = 0;
-  const workerCount = Math.min(Math.max(1, limit), items.length || 1);
-  const workers = Array.from({ length: workerCount }, async () => {
-    for (;;) {
-      const index = cursor++;
-      if (index >= items.length) break;
-      results[index] = await fn(items[index]!, index);
-    }
-  });
-  await Promise.all(workers);
-  return results;
-}
-
-// Race a factory against a wall-clock timeout. On timeout the AbortSignal fires
-// (so a query() call can cancel) and onTimeout() supplies the default-FAIL result.
-// The factory is expected not to reject (the per-condition runner catches its own
-// errors); a rejection is treated like a timeout for safety.
-export function withTimeout<T>(
-  factory: (signal: AbortSignal) => Promise<T>,
-  ms: number,
-  onTimeout: () => T,
-): Promise<T> {
-  const ac = new AbortController();
-  return new Promise<T>((resolveP) => {
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      try {
-        ac.abort();
-      } catch {
-        /* ignore */
-      }
-      resolveP(onTimeout());
-    }, ms);
-    factory(ac.signal).then(
-      (v) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        resolveP(v);
-      },
-      () => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        resolveP(onTimeout());
-      },
-    );
-  });
-}
+// Bounded-parallel runner + per-unit wall-clock timeout live in ./concurrency.js
+// (shared with mutation-verify, no import cycle). Re-exported for back-compat.
+export { mapWithConcurrency, withTimeout } from "./concurrency.js";
 
 // ── Legacy monolithic path (decomposed:false) ──
 

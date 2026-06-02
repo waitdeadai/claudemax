@@ -51,6 +51,7 @@ export function runCommand(): Command {
     .option("--no-verify", "skip independent verification step")
     .option("--tdd", "enforce write-failing-test-first cycle per sub-Spec where a test verifyHint exists", false)
     .option("--confidence <n>", "verifier confidence threshold for primary findings (0..1)", "0.8")
+    .option("--adversarial", "adversarial verify: stress-test the blind verifier with fabricated-claim mutants + isomorphic restatement, and downgrade any condition it can be fooled about", false)
     .option("--memory <path>", "memory db path", ".claudemax/memory.sqlite")
     .action(
       async (
@@ -66,6 +67,7 @@ export function runCommand(): Command {
           verify: boolean;
           tdd: boolean;
           confidence: string;
+          adversarial: boolean;
           memory: string;
         },
       ) => {
@@ -237,7 +239,9 @@ export function runCommand(): Command {
             markRunActive(rootSpec, cwd);
             console.log(kleur.cyan("→ phase 4/5  per-sub-Spec /verify (parallel, blind Opus)"));
             const verifications = await Promise.all(
-              multispec.subSpecs.map((s) => verify(s, { cwd, confidenceThreshold })),
+              multispec.subSpecs.map((s) =>
+                verify(s, { cwd, confidenceThreshold, adversarial: opts.adversarial }),
+              ),
             );
             for (const v of verifications) {
               const c = v.verdict === "verified" ? kleur.green : v.verdict === "partial" ? kleur.yellow : kleur.red;
@@ -266,7 +270,7 @@ export function runCommand(): Command {
             });
 
             console.log(kleur.cyan("→ phase 5/5  rollup /verify"));
-            const rollup = await verify(rootSpec, { cwd, confidenceThreshold });
+            const rollup = await verify(rootSpec, { cwd, confidenceThreshold, adversarial: opts.adversarial });
             rollupVerdict = rollup.verdict;
             const c = rollup.verdict === "verified" ? kleur.green : rollup.verdict === "partial" ? kleur.yellow : kleur.red;
             console.log(c(`  rollup: ${rollup.verdict}`));
