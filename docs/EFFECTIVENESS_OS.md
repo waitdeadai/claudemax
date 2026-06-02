@@ -134,3 +134,32 @@ spec (hardened, PRC-augmented) ─► bounded exec ─► decomposed+adversarial
 - No weakening of the existing dark-pattern hook battery (additive only).
 - Frontend baselines/VLM-judge depend on Playwright MCP; absence is reported, not
   faked.
+
+## Status (as shipped on `feat/effectiveness-os`)
+
+All six tranches landed, each blind-checked by its own unit tests; full suite green
+(core 48, memory 21, grounding 7, memory-mcp 8, runtime 272, cli 8 = **364**; smoke
+106/107 — the one failure, `bg phone` writing its global config under a *temp* HOME,
+is pre-existing and untouched by this branch).
+
+**Wired into the live pipeline:**
+- Decomposed + default-FAIL verify with per-condition timeout + persisted verdict
+  artifact (`.claudemax/state/verdict-<hash>.json`), default ON.
+- Completion gate hooks (`Stop`/`SubagentStop` verdict gate + `PreToolUse` stub
+  gate) in `settings.json`; blocking is default-on with `CMAX_VERDICT_GATE_OFF=1`
+  / `CMAX_STUB_GATE_OFF=1` escapes. The hard block fires only when an active run's
+  verdict is on disk **and** failing — it never traps interactive chat or in-flight
+  goal/verifier sub-sessions (a missing verdict is a no-op).
+- PRC auto-augment (default ON; `--mvp` opts out) in `multispec decompose`.
+- `--adversarial` and `--ssc` flags on `cmax run`; `cmax eval [--ablations]`.
+
+**Shipped as tested primitives (adopt-as-needed, not auto-injected into the SDK
+stream):** the per-condition adversarial judges + the SSC hardener default to live
+Opus calls — unit-tested via injected fakes, **not exercised against the live API in
+this branch**; frontend probes are spec interactive-hints (need Playwright in the
+target repo); `reinject`/poison-pill and `hierarchicalMerge` are helpers the goal
+loop + research condenser can call.
+
+**Honest ceiling (§7):** this closes the proxy↔intent gap hard, not to zero;
+effectiveness degrades with novelty/ambiguity. `cmax eval`'s hotfix-rate is how you
+measure whether it's actually working on *your* tasks.
