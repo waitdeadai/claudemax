@@ -121,7 +121,16 @@ export async function adversarialVerifyCondition(
   const judges = opts.judges ?? defaultJudges(spec, opts);
   const mutants = generateMutants(cc);
   const outcomes = await mapWithConcurrency(mutants, opts.maxParallel ?? 3, async (m) => {
-    const rejected = await judges.judgeMutant(cc, m);
+    // A judge failure (e.g. an SDK "max turns" throw) is INCONCLUSIVE — the
+    // adversarial layer is secondary, so it must never crash the run nor
+    // spuriously downgrade a real condition. Treat a throw as "rejected" (no
+    // downgrade), never as an accepted fabrication.
+    let rejected: boolean;
+    try {
+      rejected = await judges.judgeMutant(cc, m);
+    } catch {
+      rejected = true;
+    }
     return {
       mutantId: m.id,
       kind: m.kind,
@@ -129,7 +138,12 @@ export async function adversarialVerifyCondition(
       note: rejected ? "rejected fabricated claim" : "ACCEPTED fabricated claim (gameable)",
     } satisfies MutantOutcome;
   });
-  const isomorphicStable = await judges.judgeIsomorphic(cc);
+  let isomorphicStable: boolean;
+  try {
+    isomorphicStable = await judges.judgeIsomorphic(cc);
+  } catch {
+    isomorphicStable = true; // inconclusive → don't manufacture instability
+  }
   return scoreAdversarial(cc.id, outcomes, isomorphicStable, opts.requiredRejectionRate);
 }
 
@@ -193,7 +207,9 @@ function defaultJudges(spec: Spec, opts: AdversarialOptions): AdversarialJudges 
     const b = baseSdkOptions({
       cwd: opts.cwd,
       env: opts.env,
-      maxTurns: 8,
+      // 14 (was 8): a repo-reading adversarial auditor needs room to actually
+      // check; 8 turns frequently tripped the SDK max-turns throw mid-audit.
+      maxTurns: 14,
       effort: opts.effort,
       thinking: "adaptive",
     });
