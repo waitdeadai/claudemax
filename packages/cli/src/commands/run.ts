@@ -12,6 +12,9 @@ import {
 import {
   runGoal,
   verify,
+  markRunActive,
+  hardenSpec,
+  detectEasyPass,
   detectPlan,
   deepResearch,
   decomposeIntoMultiSpec,
@@ -48,8 +51,11 @@ export function runCommand(): Command {
     .option("--mode <mode>", "auto | solo | teams (parallelism mode)", "auto")
     .option("--no-research", "skip /deepresearch (smaller / simpler goals)")
     .option("--no-verify", "skip independent verification step")
+    .option("--mvp", "opt out of the production-ready bar (PRC): sub-Specs keep only their explicit completion conditions — MVP is the exception, not the default", false)
+    .option("--ssc", "Specification Self-Correction: harden each sub-Spec (tighten gameable verifyHints, add edge/failure coverage) before execution, and re-examine a verify that passed too easily", false)
     .option("--tdd", "enforce write-failing-test-first cycle per sub-Spec where a test verifyHint exists", false)
     .option("--confidence <n>", "verifier confidence threshold for primary findings (0..1)", "0.8")
+    .option("--adversarial", "adversarial verify: stress-test the blind verifier with fabricated-claim mutants + isomorphic restatement, and downgrade any condition it can be fooled about", false)
     .option("--memory <path>", "memory db path", ".claudemax/memory.sqlite")
     .action(
       async (
@@ -63,8 +69,11 @@ export function runCommand(): Command {
           mode: Mode;
           research: boolean;
           verify: boolean;
+          mvp: boolean;
+          ssc: boolean;
           tdd: boolean;
           confidence: string;
+          adversarial: boolean;
           memory: string;
         },
       ) => {
@@ -121,7 +130,18 @@ export function runCommand(): Command {
 
           phase = "decompose";
           console.log(kleur.cyan("→ phase 2/5  multispec decompose"));
-          const multispec = await decomposeIntoMultiSpec(goal, { cwd, researchBrief: brief });
+          let multispec = await decomposeIntoMultiSpec(goal, { cwd, researchBrief: brief, mvp: opts.mvp });
+          if (opts.ssc) {
+            console.log(kleur.cyan("→ SSC: hardening sub-Specs before execution (tighten gameable verifyHints, add edge/failure coverage)"));
+            const hardenedSubs = await Promise.all(
+              multispec.subSpecs.map(async (s) => {
+                const { hardened, changes } = await hardenSpec(s, { cwd, effort });
+                if (changes.length) console.log(kleur.dim(`  ${slugify(s.title)}: ${changes.length} hardening edit(s)`));
+                return hardened;
+              }),
+            );
+            multispec = { ...multispec, subSpecs: hardenedSubs };
+          }
           const specPath = resolve(cwd, opts.out);
           const rootSpec: Spec = {
             title: multispec.rootGoal,
@@ -230,9 +250,15 @@ export function runCommand(): Command {
           let rollupVerdict: "verified" | "partial" | "failed" | "unverified" | "skipped" = "skipped";
           if (opts.verify) {
             phase = "verify";
+            // Arm the completion gate for THIS run (Frente C): from here a session
+            // Stop is blocked unless verify writes a passing verdict for rootSpec.
+            // The rollup verify below clears the sentinel on a matching pass.
+            markRunActive(rootSpec, cwd);
             console.log(kleur.cyan("→ phase 4/5  per-sub-Spec /verify (parallel, blind Opus)"));
             const verifications = await Promise.all(
-              multispec.subSpecs.map((s) => verify(s, { cwd, confidenceThreshold })),
+              multispec.subSpecs.map((s) =>
+                verify(s, { cwd, confidenceThreshold, adversarial: opts.adversarial }),
+              ),
             );
             for (const v of verifications) {
               const c = v.verdict === "verified" ? kleur.green : v.verdict === "partial" ? kleur.yellow : kleur.red;
@@ -261,10 +287,26 @@ export function runCommand(): Command {
             });
 
             console.log(kleur.cyan("→ phase 5/5  rollup /verify"));
-            const rollup = await verify(rootSpec, { cwd, confidenceThreshold });
+            const rollup = await verify(rootSpec, { cwd, confidenceThreshold, adversarial: opts.adversarial });
             rollupVerdict = rollup.verdict;
             const c = rollup.verdict === "verified" ? kleur.green : rollup.verdict === "partial" ? kleur.yellow : kleur.red;
             console.log(c(`  rollup: ${rollup.verdict}`));
+
+            // SSC easy-pass re-check (Frente A.2): a verdict that passed too easily is
+            // re-examined, not accepted. Always warn; with --ssc, escalate to an
+            // adversarial re-verify whose verdict supersedes.
+            const easy = detectEasyPass(rootSpec, rollup);
+            if (easy.suspicious) {
+              console.log(kleur.yellow(`  ⚠ verify passed but looks too easy: ${easy.reasons.join("; ")}`));
+              if (opts.ssc) {
+                console.log(kleur.cyan("  → SSC re-examination: adversarial re-verify"));
+                const reverify = await verify(rootSpec, { cwd, confidenceThreshold, adversarial: true });
+                rollupVerdict = reverify.verdict;
+                console.log(
+                  (reverify.verdict === "verified" ? kleur.green : kleur.yellow)(`    re-verify: ${reverify.verdict}`),
+                );
+              }
+            }
             writeHandoff({
               cwd,
               rootGoal: goal,

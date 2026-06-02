@@ -178,6 +178,12 @@ export interface VerificationFinding {
   readonly failureCategory?: FailureCategory;
   readonly actionableNext?: string;
   readonly consolidatedFrom?: readonly string[];
+  // On-disk evidence artifacts the verifier produced/read (test output, screenshot,
+  // a11y snapshot, log). Evidence-as-file: a hook can re-check these without the model.
+  readonly evidenceArtifacts?: readonly string[];
+  // True when the per-condition verifier was aborted by its wall-clock timeout
+  // (decomposed verify, Frente B.1) — a timed-out condition is default-FAIL.
+  readonly timedOut?: boolean;
 }
 
 export interface VerificationReport {
@@ -189,6 +195,9 @@ export interface VerificationReport {
   readonly notes: string;
   readonly confidenceThreshold: number;
   readonly reason?: string;
+  // Path to the persisted verdict artifact (.claudemax/state/verdict-<hash>.json)
+  // that the Stop/SubagentStop completion gate reads. Set when verify() persisted.
+  readonly verdictArtifactPath?: string;
 }
 
 export interface MultiSpecVerification {

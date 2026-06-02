@@ -1,4 +1,4 @@
-import type { Spec } from "@claudemax/core";
+import type { Spec, SpecCompletionCondition } from "@claudemax/core";
 
 // Tool rule injected as a prefix into every worker agent's system prompt.
 // Source: letta.com/blog/benchmarking-ai-agent-memory (2025-08-12) — agents
@@ -177,4 +177,32 @@ Verdict rules (computed AFTER suppressing confidence < 0.8):
 - "verified" iff every high-confidence finding is met
 - "partial" if some are met and some are not (or low-confidence on critical conditions)
 - "failed" if none are met, or implementation claimed success and the repo does not show it`;
+};
+
+// Per-condition blind verifier (decomposed verify, Frente B.1 + B.4). One Opus
+// agent judges EXACTLY ONE completion condition with a fresh context, so a hard
+// per-unit timeout can bound it and a hung condition fails only itself. The
+// default-FAIL + evidence-required framing is what closes the proxy↔intent gap:
+// "met" is earned with a first-hand artifact, never narrated.
+export const VERIFIER_ONE_SYSTEM = (spec: Spec, cc: SpecCompletionCondition): string => {
+  const interactive = cc.interactive
+    ? `\ninteractive: tool=${cc.interactive.tool}${cc.interactive.expect ? ` expect="${cc.interactive.expect}"` : ""} (the runtime already executed this; its result is handed to you as PRIMARY, first-hand evidence — if it failed, this condition is NOT met)`
+    : "";
+  return `You are the claudemax independent verifier. You are judging EXACTLY ONE completion condition, blind. You did NOT implement it. Trust nothing you did not observe first-hand.
+
+GOAL (context only): ${spec.goal}
+
+THE ONE CONDITION YOU JUDGE:
+[${cc.id}] ${cc.description}
+verify: ${cc.verifyHint}${interactive}
+
+DEFAULT-FAIL + EVIDENCE-REQUIRED (hard rules — these define "met"):
+- Start from met:false. Flip to met:true ONLY after producing concrete, first-hand evidence: a command you ran and its exit code, a specific file region you read, a named test that passed, an artifact you generated.
+- If you cannot obtain such evidence in this turn budget, met MUST stay false. Narration, assumptions, and "it should work" are NOT evidence.
+- Put every concrete artifact path you produced or read (test output, screenshot, log, a11y snapshot) into evidenceArtifacts[].
+- confidence: use 0.95+ ONLY with first-hand evidence; 0.6–0.85 for indirect evidence; <0.6 when you could not get a clean check. Findings below the threshold do NOT count toward "done", so do not pad.
+- If an interactive probe is provided and it did not pass, this condition is met:false regardless of how the code looks.
+
+Output ONLY this JSON object (no prose, no fences):
+{"met": true|false, "evidence": "<your first-hand observation>", "confidence": 0.0..1.0, "failureCategory": "<one of: missing-file|test-failure|build-error|type-error|behavior-mismatch|incomplete-implementation|regression|spec-ambiguity|interactive-failure|unknown — only when met=false>", "actionableNext": "<one concrete next step naming a file/test/behavior — only when met=false>", "evidenceArtifacts": ["<path you produced or read>"]}`;
 };

@@ -11,6 +11,7 @@ import {
   type MultiSpecVerification,
 } from "@claudemax/core";
 import { extractStructuredOutput } from "./sdk-options.js";
+import { augmentMultiSpecWithPRC } from "./prc.js";
 
 const MULTISPEC_JSON_SCHEMA = {
   type: "object",
@@ -100,6 +101,9 @@ const MULTISPEC_JSON_SCHEMA = {
 export interface DecomposeOptions {
   readonly cwd?: string;
   readonly researchBrief?: ResearchBrief;
+  // Default false → production-ready bar auto-appended to every sub-Spec + rollup
+  // (PRC, §2-bis). --mvp opts out: MVP is the explicit exception, not the default.
+  readonly mvp?: boolean;
 }
 
 export async function decomposeIntoMultiSpec(
@@ -156,7 +160,7 @@ export async function decomposeIntoMultiSpec(
   const writeSetByspecId = (obj["writeSetByspecId"] ?? {}) as Record<string, readonly string[]>;
   const mode = selectParallelMode(subSpecs, writeSetByspecId);
 
-  return {
+  const multispec: MultiSpec = {
     rootGoal: (obj["rootGoal"] as string) ?? rootGoal,
     researchBrief: opts.researchBrief,
     subSpecs,
@@ -167,6 +171,9 @@ export async function decomposeIntoMultiSpec(
     modeReason: mode.reason,
     createdAt: now,
   };
+
+  // Bake in the production-ready bar by default (§2-bis). --mvp opts out.
+  return augmentMultiSpecWithPRC(multispec, { mvp: opts.mvp });
 }
 
 export function selectParallelMode(
