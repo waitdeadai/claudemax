@@ -101,7 +101,12 @@ export function baseSdkOptions(o: BaseQueryOptions = {}): Record<string, unknown
   };
   if (o.cwd) out["cwd"] = o.cwd;
   const otel = buildOtelEnv(o);
-  out["env"] = { ...otel, ...(o.env ?? {}) };
+  // Inherit the parent environment (PATH, HOME, …) FIRST, then overlay OTEL +
+  // caller env. Without process.env, the SDK's tool subprocesses run with no PATH,
+  // so Bash returns "command not found" (exit 127) for git/ls/node/pnpm — which
+  // silently cripples every goal that builds/tests and every verify that shells
+  // out. (Confirmed in sub-session transcripts: "git: command not found".)
+  out["env"] = { ...process.env, ...otel, ...(o.env ?? {}) };
   if (o.maxTurns !== undefined) out["maxTurns"] = o.maxTurns;
   if (o.maxBudgetUsd !== undefined) out["maxBudgetUsd"] = o.maxBudgetUsd;
   if (o.thinking === "adaptive") out["thinking"] = { type: "adaptive" };

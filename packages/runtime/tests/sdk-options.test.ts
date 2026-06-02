@@ -156,3 +156,19 @@ describe("baseSdkOptions settingSources (goal Stop-hook deadlock fix)", () => {
     expect(baseSdkOptions({ settingSources: [] })["settingSources"]).toEqual([]);
   });
 });
+
+describe("baseSdkOptions env (sub-session Bash PATH fix)", () => {
+  it("inherits the parent PATH so Bash tool subprocesses can find git/ls/node/pnpm", () => {
+    const env = baseSdkOptions({}).env as Record<string, string | undefined>;
+    expect(env["PATH"]).toBe(process.env["PATH"]);
+  });
+
+  it("overlays caller env on top of the inherited environment without dropping PATH", () => {
+    const env = baseSdkOptions({ env: { CMAX_TEST_OVERLAY: "yes" } }).env as Record<
+      string,
+      string | undefined
+    >;
+    expect(env["CMAX_TEST_OVERLAY"]).toBe("yes");
+    expect(env["PATH"]).toBe(process.env["PATH"]);
+  });
+});
