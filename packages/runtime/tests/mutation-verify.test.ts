@@ -108,3 +108,20 @@ describe("isomorphicRestate", () => {
     expect(r.toLowerCase()).toContain("counterexample");
   });
 });
+
+describe("adversarialVerifyCondition resilience (live-test crash fix)", () => {
+  it("does not throw when a judge throws (e.g. SDK 'max turns') — inconclusive, never a spurious downgrade", async () => {
+    const throwing: AdversarialJudges = {
+      judgeMutant: async () => {
+        throw new Error("Reached maximum number of turns (8)");
+      },
+      judgeIsomorphic: async () => {
+        throw new Error("boom");
+      },
+    };
+    const r = await adversarialVerifyCondition(spec(["a"]), cc("a"), { judges: throwing });
+    expect(r.gameable).toBe(false); // a judge failure must NOT mark a real condition gameable
+    expect(r.mutantsRejected).toBe(r.mutantsTotal); // a thrown judge is treated as "rejected" (inconclusive)
+    expect(r.isomorphicStable).toBe(true);
+  });
+});

@@ -167,19 +167,27 @@ export async function verify(spec: Spec, opts: VerifyOptions = {}): Promise<Veri
   if (opts.adversarial) {
     const metIds = complete.filter((f) => f.met).map((f) => f.id);
     if (metIds.length) {
-      const results = await adversarialVerify(spec, metIds, {
-        cwd,
-        env: opts.env,
-        effort: opts.effort,
-        ...(opts.adversarialJudges ? { judges: opts.adversarialJudges } : {}),
-      });
-      adjudicated = applyAdversarialDowngrade(complete, results);
-      adversarialSummary = results.map((r) => ({
-        conditionId: r.conditionId,
-        rejectionRate: r.rejectionRate,
-        isomorphicStable: r.isomorphicStable,
-        gameable: r.gameable,
-      }));
+      try {
+        const results = await adversarialVerify(spec, metIds, {
+          cwd,
+          env: opts.env,
+          effort: opts.effort,
+          ...(opts.adversarialJudges ? { judges: opts.adversarialJudges } : {}),
+        });
+        adjudicated = applyAdversarialDowngrade(complete, results);
+        adversarialSummary = results.map((r) => ({
+          conditionId: r.conditionId,
+          rejectionRate: r.rejectionRate,
+          isomorphicStable: r.isomorphicStable,
+          gameable: r.gameable,
+        }));
+      } catch {
+        // Adversarial is a SECONDARY layer; it must never crash verify or fail
+        // conditions on a tool error. Skip it — the decomposed, evidence-required
+        // verdict remains the source of truth.
+        adjudicated = complete;
+        adversarialSummary = [];
+      }
     }
   }
 

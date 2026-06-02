@@ -8,6 +8,7 @@ import {
   resolveBillingEra,
   type ModelId,
   type Spec,
+  type VerificationReport,
 } from "@claudemax/core";
 import {
   runGoal,
@@ -257,7 +258,7 @@ export function runCommand(): Command {
             console.log(kleur.cyan("→ phase 4/5  per-sub-Spec /verify (parallel, blind Opus)"));
             const verifications = await Promise.all(
               multispec.subSpecs.map((s) =>
-                verify(s, { cwd, confidenceThreshold, adversarial: opts.adversarial }),
+                safeVerify(s, { cwd, confidenceThreshold, adversarial: opts.adversarial }),
               ),
             );
             for (const v of verifications) {
@@ -287,7 +288,7 @@ export function runCommand(): Command {
             });
 
             console.log(kleur.cyan("→ phase 5/5  rollup /verify"));
-            const rollup = await verify(rootSpec, { cwd, confidenceThreshold, adversarial: opts.adversarial });
+            const rollup = await safeVerify(rootSpec, { cwd, confidenceThreshold, adversarial: opts.adversarial });
             rollupVerdict = rollup.verdict;
             const c = rollup.verdict === "verified" ? kleur.green : rollup.verdict === "partial" ? kleur.yellow : kleur.red;
             console.log(c(`  rollup: ${rollup.verdict}`));
@@ -300,7 +301,7 @@ export function runCommand(): Command {
               console.log(kleur.yellow(`  ⚠ verify passed but looks too easy: ${easy.reasons.join("; ")}`));
               if (opts.ssc) {
                 console.log(kleur.cyan("  → SSC re-examination: adversarial re-verify"));
-                const reverify = await verify(rootSpec, { cwd, confidenceThreshold, adversarial: true });
+                const reverify = await safeVerify(rootSpec, { cwd, confidenceThreshold, adversarial: true });
                 rollupVerdict = reverify.verdict;
                 console.log(
                   (reverify.verdict === "verified" ? kleur.green : kleur.yellow)(`    re-verify: ${reverify.verdict}`),
@@ -398,6 +399,33 @@ export function runCommand(): Command {
         }
       },
     );
+}
+
+// Isolate a per-sub-Spec verify failure so one throw can't abort the whole run
+// (the Promise.all over verifies). The isolated sub-Spec is recorded as failed
+// with the error in notes — honest, never a silent pass.
+async function safeVerify(
+  spec: Spec,
+  opts: { cwd: string; confidenceThreshold: number; adversarial: boolean },
+): Promise<VerificationReport> {
+  try {
+    return await verify(spec, {
+      cwd: opts.cwd,
+      confidenceThreshold: opts.confidenceThreshold,
+      adversarial: opts.adversarial,
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    return {
+      spec,
+      perCondition: [],
+      suppressedLowConfidence: [],
+      verdict: "failed",
+      verifierTier: "opus",
+      notes: `verify threw and was isolated: ${reason}`,
+      confidenceThreshold: opts.confidenceThreshold,
+    };
+  }
 }
 
 function slugify(s: string): string {
