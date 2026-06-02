@@ -32,6 +32,11 @@ export async function runTddCycle(
     cwd: opts.cwd,
     maxTurns: opts.maxTurns ?? 80,
     effort: opts.effort,
+    // Same deadlock fix as runGoal: the TDD driver emits a prose FINAL TDD BLOCK
+    // that the user-facing no-vibes Stop hook blocks (→ runs to the turn cap).
+    // Don't load settings-file hooks for an autonomous worker; the blind verify is
+    // the enforcement gate, not tone-policing the build loop.
+    settingSources: [],
   });
 
   const sys = TDD_SYSTEM(spec, testCmd);
