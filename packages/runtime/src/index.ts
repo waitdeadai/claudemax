@@ -4,6 +4,7 @@ export * from "./verify.js";
 export * from "./verdict-artifact.js";
 export * from "./mutation-verify.js";
 export * from "./prc.js";
+export * from "./ssc.js";
 export * from "./spec-writer.js";
 export * from "./prompts.js";
 export * from "./billing.js";
