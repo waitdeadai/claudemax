@@ -40,6 +40,13 @@ export interface BaseQueryOptions {
   // .claudemax/agent-memory/<agent-id>/ here. SDK types are stale on this
   // option; baseSdkOptions casts via `as never` at the query() boundary.
   readonly memoryPath?: string;
+  // Which settings files the SDK loads (hooks + permissions + env). Default
+  // ["user","project"]. Autonomous WORKER queries (the /goal driver) pass [] so
+  // the user-facing dark-pattern Stop hooks (e.g. no-vibes) can't deadlock the
+  // driver's FINISHED block to max-turns — those hooks police the interactive
+  // assistant's messages, not an autonomous worker; enforcement for workers lives
+  // in the separate, blind, decomposed verify, not in the build loop.
+  readonly settingSources?: readonly string[];
 }
 
 // OTEL conventions per https://opentelemetry.io/docs/specs/semconv/
@@ -86,7 +93,7 @@ export function estimateTaskBudgetTokens(tier: ModelTier, usdBudget: number): nu
 export function baseSdkOptions(o: BaseQueryOptions = {}): Record<string, unknown> {
   const out: Record<string, unknown> = {
     effort: o.effort ?? DEFAULT_EFFORT,
-    settingSources: ["user", "project"],
+    settingSources: o.settingSources ?? ["user", "project"],
     skills: "all",
     agentProgressSummaries: true,
     forwardSubagentText: true,

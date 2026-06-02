@@ -146,3 +146,13 @@ describe("parseUsageWithCache", () => {
     expect(r.cacheWrite5mTokens).toBe(300);
   });
 });
+
+describe("baseSdkOptions settingSources (goal Stop-hook deadlock fix)", () => {
+  it("defaults to user + project settings", () => {
+    expect(baseSdkOptions({})["settingSources"]).toEqual(["user", "project"]);
+  });
+
+  it("honors an explicit override so the /goal driver can run with no file hooks", () => {
+    expect(baseSdkOptions({ settingSources: [] })["settingSources"]).toEqual([]);
+  });
+});
