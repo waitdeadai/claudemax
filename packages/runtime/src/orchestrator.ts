@@ -113,6 +113,11 @@ async function runPacket(
     // Opus 4.8 ships "fewer subagents spawned by default"; nudge adaptive thinking
     // for routes that escalate to opus so the model reasons before calling tools.
     thinking: decision.tier === "opus" ? "adaptive" : undefined,
+    // Same deadlock fix as runGoal: this packet worker emits a prose EVIDENCE/STATUS
+    // closeout that the user-facing no-vibes Stop hook blocks (→ runs to the turn
+    // cap). Don't load settings-file hooks for an autonomous worker; enforcement is
+    // the separate blind verify, not tone-policing the build loop.
+    settingSources: [],
   });
 
   try {
