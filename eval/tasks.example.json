@@ -1,0 +1,35 @@
+[
+  {
+    "id": "code-1-json-flag",
+    "goal": "Add a --json flag to the CLI that prints results as JSON to stdout",
+    "kind": "code",
+    "cwd": "/absolute/path/to/your/repo",
+    "hiddenChecks": [
+      "node dist/cli.js --json | jq -e '.results' >/dev/null",
+      "node dist/cli.js --json --unknown-flag; test $? -ne 0"
+    ],
+    "humanVerdict": "pass"
+  },
+  {
+    "id": "code-2-rate-limiter-edges",
+    "goal": "Implement a sliding-window rate limiter",
+    "kind": "code",
+    "cwd": "/absolute/path/to/your/repo",
+    "hiddenChecks": [
+      "pnpm test ratelimit -- --run",
+      "pnpm test ratelimit-concurrent -- --run",
+      "pnpm test ratelimit-empty-window -- --run"
+    ],
+    "humanVerdict": "pass"
+  },
+  {
+    "id": "frontend-1-login",
+    "goal": "Build a /login page with username + password fields and an enabled submit button",
+    "kind": "frontend",
+    "cwd": "/absolute/path/to/your/webapp",
+    "hiddenChecks": [
+      "curl -sf http://localhost:3000/login >/dev/null",
+      "node scripts/a11y-check.mjs http://localhost:3000/login --expect-form username,password,submit"
+    ]
+  }
+]

@@ -23,3 +23,6 @@ vendor/
 
 # searchoclock hook state dir (last-error.md + state.json) — never committed
 .searchoclock/
+
+# private eval task set (only the example is committed)
+eval/tasks.json
