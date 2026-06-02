@@ -12,6 +12,7 @@ import {
 import {
   runGoal,
   verify,
+  markRunActive,
   detectPlan,
   deepResearch,
   decomposeIntoMultiSpec,
@@ -230,6 +231,10 @@ export function runCommand(): Command {
           let rollupVerdict: "verified" | "partial" | "failed" | "unverified" | "skipped" = "skipped";
           if (opts.verify) {
             phase = "verify";
+            // Arm the completion gate for THIS run (Frente C): from here a session
+            // Stop is blocked unless verify writes a passing verdict for rootSpec.
+            // The rollup verify below clears the sentinel on a matching pass.
+            markRunActive(rootSpec, cwd);
             console.log(kleur.cyan("→ phase 4/5  per-sub-Spec /verify (parallel, blind Opus)"));
             const verifications = await Promise.all(
               multispec.subSpecs.map((s) => verify(s, { cwd, confidenceThreshold })),

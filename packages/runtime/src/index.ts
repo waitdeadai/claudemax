@@ -1,6 +1,7 @@
 export * from "./orchestrator.js";
 export * from "./goal.js";
 export * from "./verify.js";
+export * from "./verdict-artifact.js";
 export * from "./spec-writer.js";
 export * from "./prompts.js";
 export * from "./billing.js";

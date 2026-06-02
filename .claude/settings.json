@@ -62,6 +62,7 @@
         "matcher": ".*",
         "hooks": [
           { "type": "command", "command": ".claude/hooks/cmax-stop.sh" },
+          { "type": "command", "command": ".claude/hooks/cmax-verdict-gate.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-vibes.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-curfew.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-sycophancy.sh", "timeout": 5 },
@@ -94,6 +95,7 @@
       {
         "hooks": [
           { "type": "command", "command": ".claude/hooks/freshness-gate.sh", "timeout": 5 },
+          { "type": "command", "command": ".claude/hooks/cmax-verdict-gate.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-vibes.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh honest-eta.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-aggregator-hallucination.sh", "timeout": 5 },
@@ -122,6 +124,7 @@
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [
+          { "type": "command", "command": ".claude/hooks/cmax-stub-gate.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-vibes.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-approval-sneak.sh", "timeout": 5 }
         ]
