@@ -81,6 +81,13 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
         ? estimateTaskBudgetTokens(execTier, opts.maxBudgetUsd)
         : undefined,
     abortSignal: capController.signal,
+    // Don't load the user/project dark-pattern Stop-hook battery for the autonomous
+    // driver: no-vibes exits 2 on the structured FINISHED block ("closeout needs
+    // evidence"), forcing the loop to continue to max-turns and never terminate.
+    // Those hooks police interactive USER-facing turns; the worker is gated by the
+    // separate blind verify, not by tone hooks. The memory MCP is wired inline via
+    // mcpServers below, so dropping settings does not lose grounding.
+    settingSources: [],
   });
 
   const q = opts.queryFn ?? query;
