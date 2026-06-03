@@ -12,13 +12,15 @@ export function verifyCommand(): Command {
     .option("--confidence <n>", "confidence threshold for primary findings (0..1)", "0.8")
     .option("--max-turns <n>", "turn budget for the blind verifier (raise for large multi-condition specs)", "40")
     .option("--adversarial", "stress-test the verifier with fabricated-claim mutants + an isomorphic restatement; downgrade any condition the verifier can be fooled about", false)
-    .action(async (specPath: string, opts: { confidence: string; maxTurns: string; adversarial: boolean }) => {
+    .option("--no-decompose", "run ONE monolithic blind pass (shared repo read + test/typecheck run, judges all conditions together) instead of one bounded sub-agent per condition — cheaper, and avoids per-condition turn/timeout exhaustion on small specs")
+    .action(async (specPath: string, opts: { confidence: string; maxTurns: string; adversarial: boolean; decompose: boolean }) => {
       const md = readFileSync(resolve(process.cwd(), specPath), "utf8");
       const spec = parseSpecMarkdown(md);
       const confidenceThreshold = Number(opts.confidence);
       const maxTurns = Number(opts.maxTurns);
-      console.log(kleur.cyan(`→ verifying ${spec.title} with blind Opus pass (threshold ${confidenceThreshold}, maxTurns ${maxTurns}${opts.adversarial ? ", adversarial" : ""})...`));
-      const report = await verify(spec, { confidenceThreshold, maxTurns, adversarial: opts.adversarial });
+      const mode = opts.decompose ? "decomposed per-condition" : "monolithic";
+      console.log(kleur.cyan(`→ verifying ${spec.title} with blind Opus pass (${mode}, threshold ${confidenceThreshold}, maxTurns ${maxTurns}${opts.adversarial ? ", adversarial" : ""})...`));
+      const report = await verify(spec, { confidenceThreshold, maxTurns, adversarial: opts.adversarial, decomposed: opts.decompose });
       const color =
         report.verdict === "verified"
           ? kleur.green

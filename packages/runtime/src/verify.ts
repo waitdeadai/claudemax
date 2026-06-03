@@ -28,9 +28,15 @@ const DEFAULT_CONFIDENCE_THRESHOLD = 0.8;
 // Decomposed verify (Frente B.1): one blind Opus agent per completion condition,
 // bounded-parallel, each with a hard wall-clock timeout. A hung condition fails
 // only itself instead of stalling a monolithic whole-spec pass.
-const DEFAULT_PER_CONDITION_TIMEOUT_MS = 180_000;
+// 300s / 40 turns: a per-condition verifier must often run the full test suite AND
+// the typechecker AND read several files before it can cite first-hand evidence. The
+// old budget (180s / 16 turns) was below that floor for heavy conditions (e.g.
+// "all tests pass", "typecheck clean"), so those sub-agents errored with "Reached
+// maximum number of turns (16)" or timed out → default-FAIL → false-negative partials
+// even on a genuinely-green build. Matched to the monolithic pass's 40-turn budget.
+const DEFAULT_PER_CONDITION_TIMEOUT_MS = 300_000;
 const DEFAULT_MAX_PARALLEL = 4;
-const DEFAULT_PER_CONDITION_MAX_TURNS = 16;
+const DEFAULT_PER_CONDITION_MAX_TURNS = 40;
 
 export interface VerifyOptions {
   readonly cwd?: string;
