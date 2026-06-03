@@ -161,6 +161,8 @@ Then ADD conditions for coverage the spec is missing: edge/boundary cases, failu
 Hard rules:
 - Do NOT change the goal. Do NOT remove or weaken conditions. Hardening only raises the bar.
 - Keep existing condition ids stable when tightening; use fresh ids (e.g. "h-<n>") for added conditions.
+- A verifyHint that BANS a token (e.g. a forbidden dependency or import) must target real USAGE — an import statement, a package.json entry, a runtime behavior — never a bare textual search that also matches comments or strings. ("grep zod in src returns nothing" is wrong; "no import from 'zod' and zod absent from package.json" is right.)
+- A command-based verifyHint must judge success by the process EXIT CODE (exit 0 = pass), not by a sentence appearing in output. Keep the hint internally consistent with the stated toolchain — never tighten two conditions into a pair that cannot both hold (e.g. "zero npm deps" alongside "typecheck with tsc", which needs the typescript dev-dependency).
 - Output ONLY the HardeningPlan JSON: {"tightened":[{"id","verifyHint","why"}],"added":[{"id","description","verifyHint"}],"notes"}.`;
 
 function defaultHardener(opts: HardenOptions): SpecHardener {

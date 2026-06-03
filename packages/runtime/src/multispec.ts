@@ -44,9 +44,17 @@ const MULTISPEC_JSON_SCHEMA = {
                   required: ["tool", "script"],
                   properties: {
                     tool: { type: "string", enum: ["playwright", "browser", "shell"] },
-                    script: { type: "string" },
+                    script: {
+                      type: "string",
+                      description:
+                        "Script whose EXIT CODE is the authoritative pass signal: exit 0 on success, non-zero on failure. For a 'must find nothing' check, invert so absence ⇒ exit 0 (e.g. `! grep -rqE \"<pattern>\" src`). A keyword search must target real usage (an import / a package.json entry), never a bare mention that also matches comments.",
+                    },
                     timeoutMs: { type: "number" },
-                    expect: { type: "string" },
+                    expect: {
+                      type: "string",
+                      description:
+                        "OPTIONAL short LITERAL substring the script prints on success — a sentinel like `PROBE_OK`, an `EXIT=0` line, or a TAP counter like `# fail 0`. NEVER a natural-language sentence (prose is not matched and only weakens the probe). Omit when the exit code alone proves success.",
+                    },
                   },
                 },
               },
@@ -83,9 +91,17 @@ const MULTISPEC_JSON_SCHEMA = {
             required: ["tool", "script"],
             properties: {
               tool: { type: "string", enum: ["playwright", "browser", "shell"] },
-              script: { type: "string" },
+              script: {
+                type: "string",
+                description:
+                  "Script whose EXIT CODE is the authoritative pass signal: exit 0 on success, non-zero on failure. For a 'must find nothing' check, invert so absence ⇒ exit 0 (e.g. `! grep -rqE \"<pattern>\" src`). A keyword search must target real usage (an import / a package.json entry), never a bare mention that also matches comments.",
+              },
               timeoutMs: { type: "number" },
-              expect: { type: "string" },
+              expect: {
+                type: "string",
+                description:
+                  "OPTIONAL short LITERAL substring the script prints on success — a sentinel like `PROBE_OK`, an `EXIT=0` line, or a TAP counter like `# fail 0`. NEVER a natural-language sentence (prose is not matched and only weakens the probe). Omit when the exit code alone proves success.",
+              },
             },
           },
         },
