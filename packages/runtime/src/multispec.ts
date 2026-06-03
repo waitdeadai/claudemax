@@ -150,7 +150,20 @@ export async function decomposeIntoMultiSpec(
   }
 
   const now = new Date().toISOString();
-  const subSpecs = (obj["subSpecs"] as unknown[]).map((s, i) => {
+  const rawSubSpecs = obj["subSpecs"];
+  if (!Array.isArray(rawSubSpecs) || rawSubSpecs.length === 0) {
+    // The decomposer must return a non-empty subSpecs array. When it doesn't
+    // (partial/empty structured output, or a non-multispec object slipped through),
+    // fail LEGIBLY instead of crashing with "Cannot read properties of undefined
+    // (reading 'map')". The caller (run.ts) treats a thrown decompose as a clean
+    // failure, not a crash.
+    throw new Error(
+      `multispec decomposer returned no subSpecs (got ${
+        rawSubSpecs === undefined ? "undefined" : JSON.stringify(rawSubSpecs).slice(0, 200)
+      }). Expected a non-empty array. Top-level keys present: ${Object.keys(obj).join(", ") || "(none)"}`,
+    );
+  }
+  const subSpecs = rawSubSpecs.map((s, i) => {
     const sp = s as Record<string, unknown>;
     if (!sp["createdAt"]) sp["createdAt"] = now;
     if (!sp["title"]) sp["title"] = `sub-spec-${i + 1}`;
