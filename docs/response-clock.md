@@ -1,13 +1,12 @@
 # response-clock
 
 A zero-dependency quality-of-life plugin that frames every Claude Code response with
-the local **start** time and, when the turn finishes, the local **end** time plus
-elapsed duration in brackets:
+local timestamps at each phase of a turn:
 
 ```
-17:07:53
-… response …
-[17:09:20 · 1m 27s]
+17:07:53                         start (UserPromptSubmit)
+[17:07:55] Here's the plan...     thinking finished, response begins (MessageDisplay)
+[17:09:20 · 1m 27s]              end · elapsed (Stop)
 ```
 
 It is shipped two ways from this monorepo:
@@ -15,8 +14,23 @@ It is shipped two ways from this monorepo:
 1. **As an independent, submittable plugin** — `plugins/response-clock/` is a fully
    self-contained Claude Code plugin (`.claude-plugin/plugin.json` + `hooks/hooks.json`).
    It passes `claude plugin validate` and is intended for the community marketplace.
-2. **Dogfooded in the harness** — `.claude/settings.json` wires the same two scripts
-   directly: `stamp-start.sh` on `UserPromptSubmit`, `stamp-end.sh` on `Stop`.
+2. **Dogfooded in the harness** — `.claude/settings.json` wires the same scripts directly
+   across four events: `stamp-start.sh` (`UserPromptSubmit`), `stamp-thinking.sh`
+   (`MessageDisplay`), `stamp-firsttool.sh` (`PreToolUse`), `stamp-end.sh` (`Stop`).
+
+## The four stamps
+
+| Event | Script | Surface | Channel |
+|---|---|---|---|
+| `UserPromptSubmit` | `stamp-start.sh` | user | `systemMessage` |
+| `MessageDisplay` | `stamp-thinking.sh` | user (first response line) | `displayContent`, display-only, fail-safe |
+| `PreToolUse` | `stamp-firsttool.sh` | model | `additionalContext`, non-blocking |
+| `Stop` | `stamp-end.sh` | user | `systemMessage` |
+
+There is **no** Claude Code hook that fires exactly at "thinking finished," so the
+transition is captured two ways: `MessageDisplay`'s first chunk (visible, the primary
+stamp) and the first `PreToolUse` of the turn (reliable on tool-only turns). Both dedupe
+to once per turn via per-session markers reset at the next prompt.
 
 ## Why hooks, not a prompt instruction
 

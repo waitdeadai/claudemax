@@ -110,7 +110,19 @@
         ]
       }
     ],
+    "MessageDisplay": [
+      {
+        "hooks": [
+          { "type": "command", "command": "plugins/response-clock/hooks/stamp-thinking.sh", "timeout": 3 }
+        ]
+      }
+    ],
     "PreToolUse": [
+      {
+        "hooks": [
+          { "type": "command", "command": "plugins/response-clock/hooks/stamp-firsttool.sh", "timeout": 5 }
+        ]
+      },
       {
         "matcher": "Bash",
         "hooks": [

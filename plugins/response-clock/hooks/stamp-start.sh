@@ -30,6 +30,10 @@ now_epoch="$(rc_now_epoch)"
 now_disp="$(rc_now_disp)"
 printf '%s' "$now_epoch" > "$start_file" 2>/dev/null || true
 
+# Reset the per-turn "thinking finished" / "first tool" markers so the next turn
+# re-stamps. (stamp-thinking.sh on MessageDisplay, stamp-firsttool.sh on PreToolUse.)
+rm -f "$data_dir/${session_id}.thinking" "$data_dir/${session_id}.firsttool" 2>/dev/null || true
+
 prefix="${CMAX_CLOCK_START_PREFIX:-}"
 [ "${CMAX_CLOCK_EMOJI:-0}" = "1" ] && prefix="🕒 "
 start_msg="${prefix}${now_disp}"

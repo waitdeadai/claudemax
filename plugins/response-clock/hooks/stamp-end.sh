@@ -35,7 +35,9 @@ if [ "${CMAX_CLOCK_SHOW_ELAPSED:-1}" = "1" ] && [ -f "$start_file" ]; then
     elapsed_str=" · $(rc_fmt_elapsed "$((end_epoch - start_epoch))")"
   fi
 fi
-rm -f "$start_file" 2>/dev/null || true
+rm -f "$start_file" \
+  "$data_dir/${session_id}.thinking" \
+  "$data_dir/${session_id}.firsttool" 2>/dev/null || true
 
 label="${CMAX_CLOCK_END_LABEL:-}"
 end_msg="[${label}${end_disp}${elapsed_str}]"

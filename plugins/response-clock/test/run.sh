@@ -7,6 +7,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 HOOKS="$(cd "$HERE/../hooks" && pwd)"
 START="$HOOKS/stamp-start.sh"
 END="$HOOKS/stamp-end.sh"
+THINK="$HOOKS/stamp-thinking.sh"
+FIRSTTOOL="$HOOKS/stamp-firsttool.sh"
 
 DATA="$(mktemp -d)"
 trap 'rm -rf "$DATA"' EXIT
@@ -64,6 +66,41 @@ echo "== model-context opt-in =="
 out="$(printf '%s' "$PAYLOAD" | CMAX_CLOCK_CONTEXT=1 bash "$START")"
 ctx="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null || true)"
 printf '%s' "$ctx" | grep -q 'Turn started at' && ok "CMAX_CLOCK_CONTEXT=1 injects additionalContext" || bad "context opt-in ($ctx)"
+
+# --- thinking stamp (MessageDisplay) -------------------------------------------
+# NOTE: MessageDisplay's stdin schema is undocumented; rc_extract_display_text probes
+# a set of plausible string fields. These tests use ".text" as a representative one.
+echo "== thinking stamp (MessageDisplay) =="
+TSID="think-$$"
+printf '{"session_id":"%s"}' "$TSID" | bash "$START" >/dev/null   # seed start + clear markers
+MD="$(printf '{"session_id":"%s","text":"Hello world"}' "$TSID")"
+out="$(printf '%s' "$MD" | bash "$THINK")"
+is_json "$out" && ok "thinking emits valid JSON" || bad "thinking JSON ($out)"
+disp="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.displayContent // empty' 2>/dev/null || true)"
+printf '%s' "$disp" | grep -qE '^\[[0-9]{2}:[0-9]{2}:[0-9]{2}\] Hello world$' && ok "thinking prepends [time] to first chunk ($disp)" || bad "thinking displayContent ($disp)"
+out2="$(printf '%s' "$MD" | bash "$THINK")"
+[ -z "$out2" ] && ok "thinking stamps once per turn (2nd chunk no-op)" || bad "thinking double-stamped ($out2)"
+
+echo "== thinking fail-safe (unknown text field) =="
+out="$(printf '{"session_id":"safe-%s","blob":{"nested":"x"}}' "$$" | bash "$THINK")"
+[ -z "$out" ] && ok "no recognizable text -> emits nothing (text never dropped)" || bad "fail-safe leaked ($out)"
+
+echo "== thinking disable switch =="
+out="$(printf '%s' "$MD" | CMAX_CLOCK_THINKING=0 bash "$THINK")"
+[ -z "$out" ] && ok "CMAX_CLOCK_THINKING=0 emits nothing" || bad "thinking disable leaked ($out)"
+
+# --- first-tool stamp (PreToolUse) ---------------------------------------------
+echo "== first-tool stamp (PreToolUse) =="
+FSID="ftool-$$"
+printf '{"session_id":"%s"}' "$FSID" | bash "$START" >/dev/null
+PT="$(printf '{"session_id":"%s","tool_name":"Bash"}' "$FSID")"
+out="$(printf '%s' "$PT" | bash "$FIRSTTOOL")"
+is_json "$out" && ok "first-tool emits valid JSON" || bad "first-tool JSON ($out)"
+ctx="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null || true)"
+printf '%s' "$ctx" | grep -q 'thinking finished at' && ok "first-tool injects thinking-finished context ($ctx)" || bad "first-tool context ($ctx)"
+printf '%s' "$out" | jq -e '.hookSpecificOutput | has("permissionDecision") | not' >/dev/null 2>&1 && ok "first-tool never sets a permissionDecision (non-blocking)" || bad "first-tool touched permissionDecision"
+out2="$(printf '%s' "$PT" | bash "$FIRSTTOOL")"
+[ -z "$out2" ] && ok "first-tool stamps once per turn (2nd tool no-op)" || bad "first-tool double-stamped ($out2)"
 
 echo
 printf 'RESULT: %d passed, %d failed\n' "$pass" "$fail"
