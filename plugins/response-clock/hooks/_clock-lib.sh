@@ -60,3 +60,30 @@ rc_fmt_elapsed() {
 rc_json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
+
+# Fast session_id extraction (grep/sed only, no jq) for hot paths like MessageDisplay
+# which fires per streamed chunk. Same filesystem-safe normalisation as rc_session_id.
+rc_session_id_fast() {
+  local id
+  id="$(printf '%s' "$1" \
+    | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' \
+    | head -1 \
+    | sed 's/.*"\([^"]*\)"[[:space:]]*$/\1/' || true)"
+  [ -n "$id" ] || id="default"
+  printf '%s' "$id" | tr -c 'A-Za-z0-9._-' '_'
+}
+
+# Extract the visible text from a MessageDisplay payload. The event's stdin schema
+# is undocumented, so we probe a set of plausible STRING fields and return the first
+# non-empty one (objects/arrays are ignored). Returns empty when nothing matches,
+# which callers treat as "do not stamp" — never as "replace text with nothing".
+# Requires jq (callers gate on it); printing nothing is the safe default.
+rc_extract_display_text() {
+  command -v jq >/dev/null 2>&1 || return 0
+  printf '%s' "$1" | jq -r '
+    [ .text?, .content?, .message?, .delta?.text, .delta?,
+      .displayText?, .messageText?, .assistantText?, .chunk? ]
+    | map(select(type == "string" and (. | length) > 0))
+    | (.[0] // empty)
+  ' 2>/dev/null || true
+}
