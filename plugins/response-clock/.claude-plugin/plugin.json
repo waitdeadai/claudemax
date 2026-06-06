@@ -1,0 +1,22 @@
+{
+  "name": "response-clock",
+  "description": "Frames every Claude Code response with the local start time and, when it finishes, the local end time plus elapsed duration in brackets — e.g. 17:07:53 … [17:09:20 · 1m 27s]. Zero dependencies, deterministic (no model cooperation needed), fully env-configurable.",
+  "version": "0.1.0",
+  "author": {
+    "name": "waitdeadai"
+  },
+  "homepage": "https://github.com/waitdeadai/response-clock",
+  "repository": "https://github.com/waitdeadai/response-clock",
+  "license": "MIT",
+  "keywords": [
+    "hooks",
+    "time",
+    "clock",
+    "timer",
+    "elapsed",
+    "quality-of-life",
+    "productivity",
+    "userpromptsubmit",
+    "stop"
+  ]
+}
