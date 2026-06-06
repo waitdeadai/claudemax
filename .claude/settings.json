@@ -53,7 +53,8 @@
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "bash .claude/hooks/dp.sh time-anchor.sh", "timeout": 3 }
+          { "type": "command", "command": "bash .claude/hooks/dp.sh time-anchor.sh", "timeout": 3 },
+          { "type": "command", "command": "plugins/response-clock/hooks/stamp-start.sh", "timeout": 5 }
         ]
       }
     ],
@@ -62,6 +63,7 @@
         "matcher": ".*",
         "hooks": [
           { "type": "command", "command": ".claude/hooks/cmax-stop.sh" },
+          { "type": "command", "command": "plugins/response-clock/hooks/stamp-end.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-vibes.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-curfew.sh", "timeout": 5 },
           { "type": "command", "command": "bash .claude/hooks/dp.sh no-sycophancy.sh", "timeout": 5 },

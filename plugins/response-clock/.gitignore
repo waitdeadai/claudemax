@@ -1,0 +1,5 @@
+# Per-session start files (when CLAUDE_PLUGIN_DATA falls back to the plugin dir)
+*.start
+.DS_Store
+# Harness checkpoint artifacts (written by cmax PostToolUse when cwd is here)
+.claudemax/
