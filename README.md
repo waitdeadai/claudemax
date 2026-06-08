@@ -28,6 +28,31 @@ cmax run "<goal>" --mode teams         # force Claude Code Agent Teams (Mode B) 
 cmax run "<goal>" --no-research        # skip /deepresearch for simpler goals
 ```
 
+## Loop everything — the effective-results workflow
+
+Want *truly effective* autonomous results? Operate claudemax the way Claude Code's creator
+**Boris Cherny** does — **write loops, not prompts** (*"I don't prompt Claude anymore… my
+job is to write loops"*). `cmax loop run` loops the full pipeline (deepresearch → multispec
+→ parallel `/goal` → **blind verify**) until it converges; `cmax loop add` runs standing,
+scheduled, input-driven loops with dedup + a fleet-wide budget guard.
+
+```bash
+cmax loop run "build X end to end"                 # loop the full pipeline to a verified DONE
+cmax loop add pr-watch --intent "fix CI + review comments on my PRs" \
+  --schedule "*/15 * * * *" --source github-prs:"is:open author:@me" --arm
+cmax loop ls                                        # fleet status + cumulative spend + budget
+```
+
+| Goal | Command |
+|---|---|
+| Build something effective, looped to a verified DONE | `cmax loop run "<goal>"` |
+| One-shot effective build (no outer loop) | `cmax ask "<goal>"` |
+| Standing, recurring, input-driven autonomy | `cmax loop add <name> …` |
+
+> **→ Read the [Operator Guide](./docs/OPERATOR_GUIDE.md)** — the Boris method
+> reverse-engineered, SOTA-2026: daily operating routine, loop recipes, why verification is
+> the 2-3x quality multiplier, scope/cost discipline. Reference: [loop mode](./docs/LOOP_MODE.md).
+
 ## ICP
 
 **Claude Max users** — both **Max 5x** ($100/mo Agent SDK credit) and **Max 20x** ($200/mo) are first-class equals. Defaults tuned for Max, not Pro or API-key. Plan auto-detected via `cmax doctor`. No tier selection at install.
@@ -327,6 +352,8 @@ cmax init                                  # install skills + hooks into a proje
 
 ## Docs
 
+- [**Operator Guide** (the Boris method, SOTA-2026 — how to operate for effective results)](./docs/OPERATOR_GUIDE.md)
+- [Loop mode (`cmax loop` reference)](./docs/LOOP_MODE.md) · [loop-mode design + sourcing](./docs/LOOP_MODE_PLAN.md)
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Multispec pipeline](./docs/MULTISPEC.md)
 - [Parallelism (Mode A vs Mode B)](./docs/PARALLELISM.md)
