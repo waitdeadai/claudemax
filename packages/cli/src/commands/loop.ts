@@ -6,6 +6,7 @@ import { MODELS } from "@claudemax/core";
 import {
   writeSpec,
   runConvergeLoop,
+  runPipelineLoop,
   defaultStandingLoopDeps,
   runStandingLoopTick,
   saveStandingLoopSpec,
@@ -39,38 +40,85 @@ export function loopCommand(): Command {
 
   cmd
     .command("run <goal>")
-    .description("Converge-loop (Archetype A): drive one goal to DONE via fresh-context iterate→verify passes.")
-    .option("--max-passes <n>", "pass ceiling", "6")
-    .option("--max-credit <usd>", "credit ceiling across all passes", "25")
-    .option("--max-turns <n>", "per-pass turn cap", "60")
-    .option("--respec-after <n>", "consecutive no-progress passes before re-spec", "2")
-    .option("--opusolo", "run the executor on Opus too (max effectiveness, higher cost)", false)
+    .description(
+      "Loop a goal to a verified DONE. Default body = the FULL cmax pipeline (deepresearch + multispec + parallel /goal + blind rollup verify), looped with respec-on-stall + budget ceilings. Use --lean for the single-spec converge-loop.",
+    )
+    .option("--lean", "lean body: single spec → /goal → verify (no deepresearch/multispec)", false)
+    .option("--max-passes <n>", "pass ceiling", "4")
+    .option("--max-credit <usd>", "credit ceiling across all passes", "60")
+    .option("--max-turns <n>", "per-sub /goal turn cap (per-pass cap with --lean)", "120")
+    .option("--respec-after <n>", "consecutive no-progress passes before re-spec / re-decompose", "2")
+    .option("--no-research", "skip deepresearch in CONSTRUCT (pipeline body only)")
+    .option("--ssc", "harden sub-Specs before execution (pipeline body only)", false)
+    .option("--adversarial", "adversarial rollup verify (pipeline body only)", false)
+    .option("--mvp", "MVP bar instead of production-ready (pipeline body only)", false)
+    .option("--opusolo", "run the executor on Opus too (higher ceiling, higher cost)", false)
     .action(
       async (
         goal: string,
-        opts: { maxPasses: string; maxCredit: string; maxTurns: string; respecAfter: string; opusolo: boolean },
+        opts: {
+          lean: boolean;
+          maxPasses: string;
+          maxCredit: string;
+          maxTurns: string;
+          respecAfter: string;
+          research: boolean;
+          ssc: boolean;
+          adversarial: boolean;
+          mvp: boolean;
+          opusolo: boolean;
+        },
       ) => {
         const cwd = process.cwd();
-        console.log(kleur.cyan(`→ loop run: constructing spec for "${goal.slice(0, 60)}"…`));
-        const spec = await writeSpec(goal, { cwd });
-        console.log(kleur.dim(`  spec: ${spec.title} (${spec.completionConditions.length} conditions)`));
-        const res = await runConvergeLoop(spec, {
+        const model = opts.opusolo ? MODELS.opus.id : undefined;
+
+        if (opts.lean) {
+          console.log(kleur.cyan(`→ loop run --lean: constructing spec for "${goal.slice(0, 60)}"…`));
+          const spec = await writeSpec(goal, { cwd });
+          console.log(kleur.dim(`  spec: ${spec.title} (${spec.completionConditions.length} conditions)`));
+          const res = await runConvergeLoop(spec, {
+            cwd,
+            maxPasses: Number(opts.maxPasses),
+            maxCreditUsd: Number(opts.maxCredit),
+            maxTurnsPerPass: Number(opts.maxTurns),
+            respecAfterStuck: Number(opts.respecAfter),
+            model,
+            onPass: (pass, action, reason) =>
+              console.log(
+                kleur.dim(
+                  `  pass ${pass.index}: ${pass.passedConditions}/${pass.totalConditions} verified → ${action} (${reason})`,
+                ),
+              ),
+          });
+          reportFinal(res.finalAction, res.passes.length, res.totalCreditUsd, res.respecs);
+          return;
+        }
+
+        console.log(
+          kleur.bold("\n  cmax loop  ") +
+            kleur.dim("/  deepresearch → multispec → parallel /goal → rollup verify, looped  /\n"),
+        );
+        console.log(kleur.cyan(`  goal: `) + goal);
+        const res = await runPipelineLoop(goal, {
           cwd,
+          research: opts.research,
+          ssc: opts.ssc,
+          adversarial: opts.adversarial,
+          mvp: opts.mvp,
           maxPasses: Number(opts.maxPasses),
           maxCreditUsd: Number(opts.maxCredit),
-          maxTurnsPerPass: Number(opts.maxTurns),
+          maxTurnsPerSub: Number(opts.maxTurns),
           respecAfterStuck: Number(opts.respecAfter),
-          model: opts.opusolo ? MODELS.opus.id : undefined,
+          model,
+          onPhase: (m) => console.log(kleur.cyan(`→ ${m}`)),
           onPass: (pass, action, reason) =>
             console.log(
               kleur.dim(
-                `  pass ${pass.index}: ${pass.passedConditions}/${pass.totalConditions} verified → ${action} (${reason})`,
+                `  pass ${pass.index}: rollup ${pass.verdict} ${pass.passedConditions}/${pass.totalConditions} → ${action} (${reason})`,
               ),
             ),
         });
-        const sc = res.finalAction === "done" ? kleur.green : res.finalAction === "blocked" ? kleur.yellow : kleur.red;
-        console.log(sc(`\n${res.finalAction}`) + kleur.dim(` after ${res.passes.length} pass(es), $${res.totalCreditUsd.toFixed(2)}, ${res.respecs} respec(s)`));
-        process.exit(res.finalAction === "done" ? 0 : 1);
+        reportFinal(res.finalAction, res.passes.length, res.totalCreditUsd, res.respecs);
       },
     );
 
@@ -289,6 +337,14 @@ function armTick(name: string, schedule: string, command: string[], cwd: string)
     process.exit(r.status ?? 1);
   }
   console.log(kleur.green(`  ✓ armed. inspect: cmax schedule status loop-${name}`));
+}
+
+function reportFinal(action: string, passes: number, creditUsd: number, respecs: number): void {
+  const sc = action === "done" ? kleur.green : action === "blocked" ? kleur.yellow : kleur.red;
+  console.log(
+    sc(`\n${action}`) + kleur.dim(` after ${passes} pass(es), $${creditUsd.toFixed(2)}, ${respecs} respec(s)`),
+  );
+  process.exit(action === "done" ? 0 : 1);
 }
 
 function collect(value: string, prev: string[]): string[] {

@@ -32,6 +32,7 @@ export * from "./features-list.js";
 export * from "./scheduler.js";
 export * from "./haiku-judge.js";
 export * from "./loop.js";
+export * from "./pipeline-loop.js";
 export * from "./loop-ledger.js";
 export * from "./loop-budget.js";
 export * from "./standing-loop.js";

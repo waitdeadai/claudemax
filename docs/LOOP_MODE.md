@@ -5,23 +5,43 @@
 > write loops"). Design rationale + sources: [`LOOP_MODE_PLAN.md`](./LOOP_MODE_PLAN.md).
 >
 > Two archetypes, one verify-gated, budget-guarded engine:
-> - **`cmax loop run`** — drive ONE goal to DONE (converge-loop).
-> - **`cmax loop add`** — a standing, scheduled, input-driven loop (the Boris pattern).
+> - **`cmax loop run`** — drive ONE goal to DONE. **Default body = the full `cmax ask`
+>   pipeline** (deepresearch + multispec + parallel /goal + blind rollup verify),
+>   looped. `--lean` switches to the single-spec converge-loop.
+> - **`cmax loop add`** — a standing, scheduled, input-driven loop (the Boris
+>   pattern); each item's action is the same full pipeline, looped.
 
 There is no `/loop` skill — that name belongs to Claude Code's native built-in.
 claudemax exposes loop mode as the `cmax loop` CLI (the same reason `/workflow`
 was retired: don't shadow a native primitive).
 
-## Archetype A — converge-loop (`cmax loop run`)
+## `cmax loop run` — default body = the full effective pipeline
 
-Drive a single goal to a verified DONE through repeated **fresh-context**
-`iterate → verify → decide` passes. The loop body is the existing harness: `runGoal`
-advances, the blind `verify` (always Opus, never demoted) is the source of truth,
-and a pure state machine decides what happens next.
+By default `cmax loop run "<goal>"` loops your **whole** `cmax ask` workflow:
+
+1. **CONSTRUCT (once):** `/deepresearch` → multispec decompose (optionally `--ssc`).
+   Research + decomposition happen once — re-researching every pass would be wasteful.
+2. **ITERATE (each pass, fresh context):** parallel `/goal` over the sub-Specs that
+   aren't finished yet (the frontier — finished sub-Specs aren't re-run).
+3. **VERIFY:** blind Opus **rollup** verify (always Opus, never demoted) — the
+   convergence signal.
+4. **DECIDE:** the pure state machine continues / finishes / re-decomposes / stops
+   (see the table below). On `respec` it **re-decomposes** from the rollup's failing
+   conditions.
 
 ```bash
-cmax loop run "add a --json flag to `cmax doctor` and cover it with a test"
-cmax loop run "<goal>" --max-passes 8 --max-credit 40 --respec-after 2 --opusolo
+cmax loop run "build X end to end"                       # full pipeline, looped
+cmax loop run "build X" --max-passes 6 --max-credit 80 --ssc --adversarial --opusolo
+cmax loop run "build X" --no-research                    # skip deepresearch in CONSTRUCT
+```
+
+### `--lean` — single-spec converge-loop (the lighter body)
+
+For one well-defined goal where you don't need deepresearch/decomposition, `--lean`
+runs a single `writeSpec → /goal → verify` cycle, looped:
+
+```bash
+cmax loop run "add a --json flag to cmax doctor and cover it with a test" --lean
 ```
 
 The decision after each pass (`packages/core/src/loop.ts › decideNext`, pure +
@@ -98,14 +118,18 @@ cmax loop kill <name>        # stop the timer + delete all state
 
 ## What's built vs. planned
 
-Built (Phases 0–3 of `LOOP_MODE_PLAN.md`): the pure decision machine + types,
-the converge-loop runner, the standing-loop engine (sense/decide/act/verify/report)
-with live `gh`/shell sense + LLM triage, dedup ledger, fleet budget, and the full
-fleet control-plane CLI. All deterministic logic is unit-tested with injected fakes
-(no SDK/network needed).
+Built: the pure decision machine + types; the **pipeline loop** (`runPipelineLoop` —
+deepresearch + multispec decompose once, then loop parallel `/goal` + blind rollup
+verify, re-decompose on stall) which is the **default** body of `cmax loop run` and
+of every standing-loop item's ACT; the lean converge-loop (`--lean`); the
+standing-loop engine (sense/decide/act/verify/report) with live `gh`/shell sense +
+conservative LLM triage; dedup ledger; fleet budget; and the full fleet control-plane
+CLI. All deterministic logic is unit-tested with injected fakes (no SDK/network
+needed); the converge-loop and the pipeline loop are also smoke-tested against the
+live API.
 
-Deliberately **not** done: `cmax ask` is **not** a loop by default — one-shot asks
-stay one-shot; loop mode is the separate `cmax loop` surface (the right call per the
-plan's §2 verdict). Follow-ups noted in the plan: a `steer.md` between-pass inbox
-(pause/resume is the current steering control), worktree isolation per concurrent
-item, and folding loop mode into the umbrella for *continuous* work.
+Deliberately **not** done: `cmax ask` itself is **not** a loop by default — one-shot
+asks stay one-shot; loop mode is the separate `cmax loop` surface (the §2 verdict).
+Follow-ups: a `steer.md` between-pass inbox (pause/resume is the current steering
+control), worktree isolation per concurrent item, and a daemonized headless scheduler
+beyond `--arm`.

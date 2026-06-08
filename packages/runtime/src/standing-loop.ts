@@ -9,9 +9,9 @@ import {
   type LoopAction,
   type LoopVerdict,
   type ModelId,
+  type VerificationReport,
 } from "@claudemax/core";
-import { runConvergeLoop, type ConvergeLoopResult } from "./loop.js";
-import { writeSpec } from "./spec-writer.js";
+import { runPipelineLoop } from "./pipeline-loop.js";
 import {
   appendLedger,
   ledgerKeys,
@@ -91,10 +91,18 @@ export interface TickOutcome {
   readonly ts: string;
 }
 
+// What the standing engine needs back from ACT — satisfied by both the pipeline
+// loop result and the converge-loop result shapes.
+export interface LoopActResult {
+  readonly finalAction: LoopAction;
+  readonly totalCreditUsd: number;
+  readonly lastReport: VerificationReport | null;
+}
+
 export interface StandingLoopDeps {
   readonly sense: (src: LoopSource) => Promise<readonly SensedItem[]>;
   readonly triage: (intent: string, items: readonly SensedItem[]) => Promise<readonly DecidedItem[]>;
-  readonly act: (item: DecidedItem) => Promise<ConvergeLoopResult>;
+  readonly act: (item: DecidedItem) => Promise<LoopActResult>;
   readonly report: (outcome: TickOutcome) => Promise<void>;
 }
 
@@ -158,7 +166,7 @@ export async function runStandingLoopTick(
       budgetStopped = true;
       break;
     }
-    let res: ConvergeLoopResult;
+    let res: LoopActResult;
     try {
       res = await deps.act(item);
     } catch (err) {
@@ -246,6 +254,9 @@ export interface DefaultDepsOptions {
   readonly effort?: EffortLevel;
   readonly env?: Record<string, string>;
   readonly stateDir?: string;
+  // Run deepresearch inside each item's pipeline ACT (default true). Set false for
+  // cheaper/faster ticks when the intent doesn't need fresh web research per item.
+  readonly research?: boolean;
 }
 
 export function defaultStandingLoopDeps(
@@ -256,16 +267,18 @@ export function defaultStandingLoopDeps(
     sense: (src) => defaultSense(src, opts.cwd, opts.env),
     triage: (intent, items) => defaultTriage(intent, items, opts),
     act: async (item) => {
-      // CONSTRUCT this item's spec, then converge it (ACT). The converge-loop's
-      // own blind verify is the source of truth — never the executor's claim.
-      const itemSpec = await writeSpec(item.goal, { cwd: opts.cwd });
-      return runConvergeLoop(itemSpec, {
+      // ACT = the full effective pipeline per item (deepresearch + multispec
+      // decompose + parallel /goal + blind rollup verify), looped to convergence.
+      // The blind rollup verify is the source of truth — never the executor's claim.
+      const r = await runPipelineLoop(item.goal, {
         cwd: opts.cwd,
+        research: opts.research ?? true,
         maxCreditUsd: opts.perItemCreditUsd,
         model: opts.model,
         effort: opts.effort,
         env: opts.env,
       });
+      return { finalAction: r.finalAction, totalCreditUsd: r.totalCreditUsd, lastReport: r.rollup };
     },
     report: (outcome) => defaultReport(outcome, spec, opts),
   };
