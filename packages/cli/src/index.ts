@@ -25,6 +25,7 @@ import { orchestrateCommand } from "./commands/orchestrate.js";
 import { megaCommand } from "./commands/mega.js";
 import { resumeCommand } from "./commands/resume.js";
 import { scheduleCommand } from "./commands/schedule.js";
+import { loopCommand } from "./commands/loop.js";
 
 const program = new Command();
 
@@ -34,6 +35,7 @@ program
   .version("0.2.2");
 
 program.addCommand(askCommand());
+program.addCommand(loopCommand());
 program.addCommand(orchestrateCommand());
 program.addCommand(megaCommand());
 program.addCommand(resumeCommand());

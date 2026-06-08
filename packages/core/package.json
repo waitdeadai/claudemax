@@ -14,7 +14,8 @@
     "./spec": "./dist/spec.js",
     "./models": "./dist/models.js",
     "./cost": "./dist/cost.js",
-    "./types": "./dist/types.js"
+    "./types": "./dist/types.js",
+    "./loop": "./dist/loop.js"
   },
   "files": [
     "dist",
