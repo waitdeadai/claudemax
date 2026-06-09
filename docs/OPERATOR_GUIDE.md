@@ -66,7 +66,7 @@ CONSTRUCT (once): /deepresearch → multispec decompose
 cmax loop run "migrate the auth layer to passkeys with passing e2e tests"
 cmax loop run "<goal>" --max-passes 6 --max-credit 80         # let it grind longer
 cmax loop run "<goal>" --ssc --adversarial                    # hardened spec + adversarial verify
-cmax loop run "<goal>" --opusolo                              # Opus executes too (high ceiling)
+cmax loop run "<goal>" --opusolo                              # pin Opus exec post-split (pre-split it IS the default)
 cmax loop run "<goal>" --fable                                # Fable 5 executes — the long-horizon ceiling (2× Opus; usage-credit billed on Max after 2026-06-22)
 cmax loop run "small, well-defined change" --lean             # cheap single-spec spec→goal→verify
 ```

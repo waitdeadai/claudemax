@@ -31,7 +31,10 @@ By default `cmax loop run "<goal>"` loops your **whole** `cmax ask` workflow:
 
 ```bash
 cmax loop run "build X end to end"                       # full pipeline, looped
-cmax loop run "build X" --max-passes 6 --max-credit 80 --ssc --adversarial --opusolo
+cmax loop run "build X" --max-passes 6 --max-credit 80 --ssc --adversarial
+# executor default is era-aware (same rule as cmax ask): Opus 4.8 xhigh pre-split
+# (until 2026-06-15), Sonnet 4.6 after. --opusolo pins Opus regardless of era.
+# In Claude Code, /converge "<goal>" wraps this command (user-level + repo command).
 cmax loop run "build X" --no-research                    # skip deepresearch in CONSTRUCT
 cmax loop run "migrate the whole billing system" --fable # executor = Fable 5: the
 #   long-horizon ceiling ("the longer and more complex the task, the larger Fable 5's

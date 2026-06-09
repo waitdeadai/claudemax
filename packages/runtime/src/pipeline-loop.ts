@@ -1,5 +1,7 @@
 import {
   MODELS,
+  execModelForVariant,
+  resolveBillingEra,
   modelById,
   decideNext,
   hashString,
@@ -40,7 +42,7 @@ export interface PipelineLoopOptions {
   readonly maxTurnsPerSub?: number; // per-sub /goal turn cap (default 120)
   readonly respecAfterStuck?: number; // consecutive no-progress passes → respec (default 2)
   readonly maxRespecs?: number; // re-decompose is expensive; default 1
-  readonly model?: ModelId; // sub-Spec executor (default Sonnet; Opus on --opusolo)
+  readonly model?: ModelId; // sub-Spec executor (default era-aware: Opus pre-split, Sonnet post-split)
   readonly effort?: EffortLevel;
   readonly confidenceThreshold?: number; // rollup verify threshold (default 0.8)
   readonly env?: Record<string, string>;
@@ -80,7 +82,11 @@ export async function runPipelineLoop(
   const maxCreditUsd = posNum(opts.maxCreditUsd, DEFAULT_MAX_CREDIT_USD);
   const maxTurnsPerSub = posInt(opts.maxTurnsPerSub, DEFAULT_MAX_TURNS_PER_SUB);
   const maxRespecs = opts.maxRespecs ?? DEFAULT_MAX_RESPECS;
-  const execModel = opts.model ?? MODELS.sonnet.id;
+  // Era-aware executor default, same rule as cmax ask/run: pre-split (until
+  // 2026-06-15) Opus and Sonnet draw the same subscription pool, so sub-Specs
+  // execute on Opus 4.8 for free effectiveness; post-split reverts to Sonnet.
+  // --opusolo / --fable / opts.model remain explicit overrides.
+  const execModel = opts.model ?? execModelForVariant("opussonnet", resolveBillingEra());
   const research = opts.research ?? true;
   const phase = opts.onPhase ?? (() => {});
 

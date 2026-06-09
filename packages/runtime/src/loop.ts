@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   MODELS,
+  execModelForVariant,
+  resolveBillingEra,
   modelById,
   decideNext,
   hasRepeatedFingerprint,
@@ -32,7 +34,7 @@ export interface ConvergeLoopOptions {
   readonly maxTurnsPerPass?: number; // per-ITERATE turn cap (default 60)
   readonly respecAfterStuck?: number; // consecutive no-progress passes → respec (default 2)
   readonly maxRespecs?: number; // give up after this many respecs (default 2)
-  readonly model?: ModelId; // ITERATE executor (Sonnet by default via router; Opus on opusolo)
+  readonly model?: ModelId; // ITERATE executor (default era-aware: Opus pre-split, Sonnet post-split)
   readonly effort?: EffortLevel;
   readonly env?: Record<string, string>;
   readonly stateDir?: string; // checkpoint dir (default .claudemax/state/loop)
@@ -74,7 +76,9 @@ export async function runConvergeLoop(
   const maxPasses = posInt(opts.maxPasses, DEFAULT_MAX_PASSES);
   const maxCreditUsd = posNum(opts.maxCreditUsd, DEFAULT_MAX_CREDIT_USD);
   const maxTurnsPerPass = posInt(opts.maxTurnsPerPass, DEFAULT_MAX_TURNS_PER_PASS);
-  const execModel = opts.model ?? MODELS.sonnet.id;
+  // Era-aware executor default, same rule as cmax ask/run and the pipeline
+  // loop: pre-split (until 2026-06-15) executes on Opus 4.8; Sonnet after.
+  const execModel = opts.model ?? execModelForVariant("opussonnet", resolveBillingEra());
 
   const stateDir = opts.stateDir ?? join(opts.cwd, ".claudemax", "state", "loop");
   mkdirSync(stateDir, { recursive: true });

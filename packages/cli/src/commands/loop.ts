@@ -52,7 +52,7 @@ export function loopCommand(): Command {
     .option("--ssc", "harden sub-Specs before execution (pipeline body only)", false)
     .option("--adversarial", "adversarial rollup verify (pipeline body only)", false)
     .option("--mvp", "MVP bar instead of production-ready (pipeline body only)", false)
-    .option("--opusolo", "run the executor on Opus too (higher ceiling, higher cost)", false)
+    .option("--opusolo", "pin the executor to Opus regardless of billing era (default is era-aware: Opus pre-split, Sonnet post-split)", false)
     .option(
       "--fable",
       "run the executor on Fable 5 — the long-horizon ceiling (2× Opus; usage-credit billed after 2026-06-22)",
