@@ -13,7 +13,7 @@ The user-facing entry point. You describe what you want; the pipeline produces i
 
 1. **Taste check** — read `taste.md` + `taste.vision` if present. Suggest `cmax taste init` if absent and the repo has signal.
 2. **/deepresearch** — web-current research with source ledger persisted to `memory.research_sources`.
-3. **multispec decompose** — Opus authors a MultiSpec: N sub-Specs + DAG + rollup completion conditions + per-sub-Spec writeSet.
+3. **multispec decompose** — Fable 5 (while included →2026-06-22; Opus after) authors a MultiSpec: N sub-Specs + DAG + rollup completion conditions + per-sub-Spec writeSet.
 4. **/specqa** (parallel per sub-Spec) — gate spec quality (every verifyHint mechanically checkable).
 5. **/introspect** (parallel per sub-Spec) — confidence/assumption gate. Blocks at confidence < 6.
 6. **Mode selection** — Mode A (SDK subagents in one query()) for ≤ 5 sub-Specs / short runs; Mode B (Claude Code Agent Teams with shared task list + worktree isolation) for big swarms or write-set overlap.

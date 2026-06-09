@@ -79,7 +79,7 @@ That is the entire daily-driver UX. No flags, no model picker, no decomposition 
 The SOTA-2026 pipeline runs automatically:
 
 1. **`/deepresearch`** the topic. Sonnet collects sources in parallel; Opus synthesizes. Source ledger persisted to `memory.research_sources`.
-2. **multispec decompose** — Opus authors N sub-Specs with a DAG of dependencies, rollup completion conditions, and per-sub-Spec write-sets.
+2. **multispec decompose** — Fable 5 (while included →2026-06-22; Opus after) authors N sub-Specs with a DAG of dependencies, rollup completion conditions, and per-sub-Spec write-sets.
 3. **`/specqa`** (parallel) — Haiku checks each sub-Spec has mechanically-checkable verifyHints.
 4. **`/introspect`** (parallel) — Opus rates confidence per sub-Spec; blocks at confidence < 6.
 5. **Mode auto-selection** — Mode A (SDK subagents in one `query()`) for ≤ 5 sub-Specs / short runs; Mode B ([Claude Code Agent Teams](https://code.claude.com/docs/en/agent-teams) with shared task list + worktree isolation) for big swarms or write-set overlap.
@@ -103,7 +103,7 @@ cmax run "<goal>" --max-turns 80       # cap each sub-Spec's /goal loop
 This will:
 
 1. /deepresearch (web-current sourced research, persisted to memory.research_sources)
-2. multispec decompose (Opus → N sub-Specs + DAG + rollup conditions)
+2. multispec decompose (Fable 5 →2026-06-22, then Opus → N sub-Specs + DAG + rollup conditions)
 3. /specqa each sub-Spec (Haiku quality gate)
 4. /introspect each sub-Spec (Opus confidence/assumption gate)
 5. Auto-select Mode A or Mode B parallelism

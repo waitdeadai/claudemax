@@ -15,7 +15,7 @@ The umbrella. You describe what you want; the pipeline produces it — **0 → p
 
 1. **Taste check** — read `taste.md` + `taste.vision` if present. If absent and the repo has signal, suggest `cmax taste init`. Don't violate taste.
 2. **/deepresearch** — web-current research with source ledger. Persisted to `memory.research_sources`.
-3. **multispec decompose** — Opus authors a MultiSpec: N sub-Specs (each with measurable completion conditions + verifyHints) + DAG + rollup completion conditions + per-sub-Spec writeSet.
+3. **multispec decompose** — Fable 5 (while included →2026-06-22; Opus after) authors a MultiSpec: N sub-Specs (each with measurable completion conditions + verifyHints) + DAG + rollup completion conditions + per-sub-Spec writeSet.
 4. **/specqa** (parallel per sub-Spec) — gate spec quality.
 5. **/introspect** (parallel per sub-Spec) — confidence/assumption check. Block at confidence < 6.
 6. **Mode selection** — engine picks Mode A (SDK subagents in one query()) or Mode B (Claude Code Agent Teams) based on sub-Spec count, est. duration, cross-spec coordination, write-set overlap. Override with `--mode {auto|solo|teams}`.
