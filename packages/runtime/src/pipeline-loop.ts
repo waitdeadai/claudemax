@@ -13,6 +13,7 @@ import {
   type VerificationReport,
 } from "@claudemax/core";
 import { deepResearch } from "./deepresearch.js";
+import { verifyResearchBrief } from "./verify-research.js";
 import { decomposeIntoMultiSpec } from "./multispec.js";
 import { hardenSpec } from "./ssc.js";
 import { runGoal, type GoalRunResult } from "./goal.js";
@@ -46,6 +47,10 @@ export interface PipelineLoopOptions {
   readonly abortSignal?: AbortSignal;
   readonly onPhase?: (msg: string) => void;
   readonly onPass?: (pass: LoopPass, action: LoopAction, reason: string) => void;
+  // Verify research findings per-claim before decompose (default ON). The
+  // decomposed research verifier strips contradicted findings and flags
+  // unverified ones so a bad brief can't silently poison the MultiSpec.
+  readonly verifyResearch?: boolean;
   // Injection points (production leaves undefined → live SDK). Tests pass fakes.
   readonly researchFn?: (goal: string) => Promise<ResearchBrief | undefined>;
   readonly decomposeFn?: (goal: string, brief: ResearchBrief | undefined) => Promise<MultiSpec>;
@@ -80,7 +85,22 @@ export async function runPipelineLoop(
   const phase = opts.onPhase ?? (() => {});
 
   const researchFn =
-    opts.researchFn ?? (async (g: string) => (research ? deepResearch(g, { cwd: opts.cwd }) : undefined));
+    opts.researchFn ??
+    (async (g: string) => {
+      if (!research) return undefined;
+      const brief = await deepResearch(g, { cwd: opts.cwd });
+      if (opts.verifyResearch === false || brief.keyFindings.length === 0) return brief;
+      const rv = await verifyResearchBrief(brief, { cwd: opts.cwd, onProgress: phase });
+      if (rv.verdict === "failed-brief") {
+        // One re-research beats decomposing from a brief whose synthesis failed
+        // verification; the second brief is used as-is (flags intact) either way.
+        phase("verify-research: failed-brief — re-running deepresearch once");
+        const retry = await deepResearch(g, { cwd: opts.cwd, memoryFirst: false });
+        const rv2 = await verifyResearchBrief(retry, { cwd: opts.cwd, onProgress: phase });
+        return rv2.brief;
+      }
+      return rv.brief;
+    });
   const decomposeFn =
     opts.decomposeFn ??
     ((g: string, brief: ResearchBrief | undefined) =>

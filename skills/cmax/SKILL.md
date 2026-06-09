@@ -15,6 +15,7 @@ The umbrella. You describe what you want; the pipeline produces it — **0 → p
 
 1. **Taste check** — read `taste.md` + `taste.vision` if present. If absent and the repo has signal, suggest `cmax taste init`. Don't violate taste.
 2. **/deepresearch** — web-current research with source ledger. Persisted to `memory.research_sources`.
+2-bis. **verify-research** (default ON, added 2026-06-09) — decomposed per-claim verification of the brief: parallel Haiku citation-support checks on the brief's own cached excerpts (no network, 60s timeouts), Sonnet escalation (one spot-fetch + one fresh search, 120s) only for findings the excerpts can't support. Contradicted findings are stripped into openQuestions; unverified ones flagged `[unverified]`; >30% escalation demand fails the brief and re-researches once. Timeouts count as unverified, never as pass.
 3. **multispec decompose** — Fable 5 (while included →2026-06-22; Opus after) authors a MultiSpec: N sub-Specs (each with measurable completion conditions + verifyHints) + DAG + rollup completion conditions + per-sub-Spec writeSet.
 4. **/specqa** (parallel per sub-Spec) — gate spec quality.
 5. **/introspect** (parallel per sub-Spec) — confidence/assumption check. Block at confidence < 6.

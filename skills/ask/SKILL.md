@@ -13,6 +13,7 @@ The user-facing entry point. You describe what you want; the pipeline produces i
 
 1. **Taste check** — read `taste.md` + `taste.vision` if present. Suggest `cmax taste init` if absent and the repo has signal.
 2. **/deepresearch** — web-current research with source ledger persisted to `memory.research_sources`.
+2-bis. **verify-research** (default ON) — decomposed per-claim verification: parallel citation-support checks on cached excerpts, network escalation only on doubt, harness-owned timeouts (timeout = unverified, never pass). Contradicted findings stripped before decompose; failed briefs re-researched once.
 3. **multispec decompose** — Fable 5 (while included →2026-06-22; Opus after) authors a MultiSpec: N sub-Specs + DAG + rollup completion conditions + per-sub-Spec writeSet.
 4. **/specqa** (parallel per sub-Spec) — gate spec quality (every verifyHint mechanically checkable).
 5. **/introspect** (parallel per sub-Spec) — confidence/assumption gate. Blocks at confidence < 6.

@@ -18,6 +18,7 @@ import {
   detectEasyPass,
   detectPlan,
   deepResearch,
+  verifyResearchBrief,
   decomposeIntoMultiSpec,
   runTddCycle,
   runSimplifyPass,
@@ -111,6 +112,20 @@ export function runCommand(): Command {
             phase = "deepresearch";
             console.log(kleur.cyan("→ phase 1/5  /deepresearch"));
             brief = await deepResearch(goal, { cwd });
+            if (brief.keyFindings.length > 0) {
+              const rv = await verifyResearchBrief(brief, {
+                cwd,
+                onProgress: (m) => console.log(kleur.dim(`  ${m}`)),
+              });
+              brief = rv.brief;
+              if (rv.verdict === "failed-brief" || rv.verdict === "unverified") {
+                console.log(
+                  kleur.yellow(
+                    `  ! research verification: ${rv.verdict} (${rv.notes}) — proceeding with flagged findings`,
+                  ),
+                );
+              }
+            }
             for (const s of brief.sources.slice(0, 5)) {
               memory.recordResearchSource({
                 topic: brief.topic,

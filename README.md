@@ -18,7 +18,7 @@ cmax ask "migrate the auth layer to passkeys with passing tests end-to-end"
 ```
 
 One command. The pipeline runs:
-**`/deepresearch`** (web-current, sourced) → **multispec decompose** (Fable 5 authors N sub-Specs + DAG while included on Max →2026-06-22; Opus after) → **`/specqa`** (mechanically-checkable verifyHints) → **`/introspect`** (confidence + assumption hard-gate) → **parallel `/goal`** per DAG leaf (Mode A SDK subagents or Mode B Claude Code Agent Teams, auto-selected) → **per-sub-Spec `/verify`** (blind Opus) → **rollup `/verify`** (blind Opus against integration conditions). Bundled [dark-patterns hooks](https://github.com/waitdeadai/llm-dark-patterns) (35 of them) block vibes, fake citations, aggregator hallucination, and credential leaks throughout.
+**`/deepresearch`** (web-current, sourced) → **verify-research** (decomposed per-claim verification: parallel citation-support checks on cached excerpts, network escalation only on doubt, harness-owned timeouts — contradicted findings stripped before they can poison the decompose) → **multispec decompose** (Fable 5 authors N sub-Specs + DAG while included on Max →2026-06-22; Opus after) → **`/specqa`** (mechanically-checkable verifyHints) → **`/introspect`** (confidence + assumption hard-gate) → **parallel `/goal`** per DAG leaf (Mode A SDK subagents or Mode B Claude Code Agent Teams, auto-selected) → **per-sub-Spec `/verify`** (blind Opus) → **rollup `/verify`** (blind Opus against integration conditions). Bundled [dark-patterns hooks](https://github.com/waitdeadai/llm-dark-patterns) (35 of them) block vibes, fake citations, aggregator hallucination, and credential leaks throughout.
 
 Power-user flags live on `cmax run` (same engine; `cmax ask` is the friendly entry point):
 

@@ -138,6 +138,40 @@ export interface ResearchBrief {
   readonly createdAt: string;
 }
 
+// Decomposed research verification (added 2026-06-09). One check per
+// keyFinding — the atomic-claim granularity of arXiv:2602.13855 / DeepFact —
+// with the supported/contradicted/unverified verdict triple; a timeout is
+// recorded as unverified, never contradicted.
+export type ResearchClaimVerdict = "supported" | "contradicted" | "unverified";
+
+export interface ResearchFindingVerification {
+  readonly finding: KeyFinding;
+  readonly verdict: ResearchClaimVerdict;
+  // 1 = citation-support judged on the brief's own cached excerpts (no network);
+  // 2 = escalated — re-fetch a cited URL / fresh search (FaStfact-style filter).
+  readonly tier: 1 | 2;
+  readonly evidence: string;
+  readonly timedOut?: boolean;
+}
+
+export type ResearchVerificationVerdict =
+  | "verified" // ≥80% supported, zero surviving contradicted, <50% unverified
+  | "partial"
+  | "unverified" // ≥50% unverified (e.g. mass timeouts) — never call this good
+  | "failed-brief"; // escalation demand >30%: the synthesis is bad, re-research
+
+export interface ResearchVerification {
+  // Annotated copy: contradicted findings stripped (recorded in openQuestions),
+  // unverified findings prefixed "[unverified]" so the decomposer sees the flag.
+  readonly brief: ResearchBrief;
+  readonly perFinding: readonly ResearchFindingVerification[];
+  readonly verdict: ResearchVerificationVerdict;
+  readonly supportedCount: number;
+  readonly contradictedCount: number;
+  readonly unverifiedCount: number;
+  readonly notes: string;
+}
+
 export interface MultiSpec {
   readonly rootGoal: string;
   readonly researchBrief?: ResearchBrief;

@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import kleur from "kleur";
 import { resolve } from "node:path";
-import { deepResearch } from "@claudemax/runtime";
+import { deepResearch, verifyResearchBrief } from "@claudemax/runtime";
 import { MemoryStore } from "@claudemax/memory";
 
 export function researchCommand(): Command {
@@ -10,12 +10,27 @@ export function researchCommand(): Command {
     .argument("<topic>", "research topic in quotes")
     .option("--max-sources <n>", "cap on sources", "12")
     .option("--memory <path>", "memory db path", ".claudemax/memory.sqlite")
-    .action(async (topic: string, opts: { maxSources: string; memory: string }) => {
+    .option("--no-verify", "skip the decomposed per-claim research verification")
+    .action(async (topic: string, opts: { maxSources: string; memory: string; verify: boolean }) => {
       console.log(kleur.cyan(`→ deepresearch: ${topic}`));
-      const brief = await deepResearch(topic, {
+      let brief = await deepResearch(topic, {
         cwd: process.cwd(),
         maxSources: Number(opts.maxSources),
       });
+
+      if (opts.verify && brief.keyFindings.length > 0) {
+        const rv = await verifyResearchBrief(brief, {
+          cwd: process.cwd(),
+          onProgress: (m) => console.log(kleur.dim(`  ${m}`)),
+        });
+        brief = rv.brief;
+        console.log(kleur.bold(`\nverification: `) + verdictColor(rv.verdict) + kleur.dim(`  (${rv.notes})`));
+        for (const f of rv.perFinding) {
+          const mark =
+            f.verdict === "supported" ? kleur.green("✓") : f.verdict === "contradicted" ? kleur.red("✗") : kleur.yellow("?");
+          console.log(`  ${mark} [tier ${f.tier}${f.timedOut ? ", timeout" : ""}] ${f.finding.finding.slice(0, 100)}`);
+        }
+      }
 
       console.log(kleur.bold(`\nsummary`));
       console.log(brief.summary);
@@ -50,4 +65,10 @@ export function researchCommand(): Command {
       m.close();
       console.log(kleur.dim(`\n→ ${brief.sources.length} sources persisted to ${opts.memory}`));
     });
+}
+
+function verdictColor(v: string): string {
+  if (v === "verified") return kleur.green(v);
+  if (v === "partial") return kleur.yellow(v);
+  return kleur.red(v);
 }

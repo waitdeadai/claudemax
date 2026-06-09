@@ -9,6 +9,12 @@ user goal (large)
    ↓
 1. /deepresearch (Sonnet collects, Opus synthesizes)         → ResearchBrief + source ledger
    ↓
+1-bis. verify-research (decomposed, added 2026-06-09)        → per-keyFinding verdicts: tier 1 = Haiku citation-support on
+       parallel ×8 tier 1 / ×5 tier 2, 60s/120s timeouts        cached excerpts (no network); tier 2 = Sonnet spot-fetch +
+                                                                fresh search, only for findings tier 1 couldn't support.
+                                                                Contradicted findings stripped; unverified flagged;
+                                                                >30% escalation demand = failed-brief → re-research once.
+   ↓
 2. multispec decompose (Fable 5 authors while included →2026-06-22; Opus after)                         → MultiSpec: N sub-Specs + DAG + rollup conditions + writeSet per sub-Spec
    ↓
 3. /specqa (parallel; one Haiku worker per sub-Spec)          → quality gate: verifyHints must be mechanically checkable
