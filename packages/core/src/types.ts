@@ -213,6 +213,7 @@ export type MultiSpecPhase =
   | "specqa"
   | "introspect"
   | "goal"
+  | "simplify"
   | "verify-per-spec"
   | "verify-rollup";
 

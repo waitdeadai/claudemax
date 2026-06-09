@@ -18,6 +18,14 @@ A specific diff: file paths + line ranges, or a git diff stdin.
 - Style: aligned with taste.md? naming conventions? error handling patterns?
 - Tests: does the diff add/update tests for the new behavior?
 - Side effects: does the diff change something the diff message doesn't mention?
+- Simplification: is the diff heavier than it needs to be? Flag (don't auto-apply)
+  deep nesting, nested ternaries, dead code, generic names, speculative
+  abstraction. Two disciplines bound the suggestion: **Chesterton's Fence** —
+  never propose removing something whose original intent you haven't recovered
+  (check `git blame`); **behavior preservation** — if a "simplification" would
+  require editing a test to stay green, it changed behavior; reject it. For an
+  automated, behavior-gated cleanup pass (post-build/pre-verify) see
+  `docs/SPEC-SIMPLIFY-PASS.md`; for on-demand cleanup use the native `/simplify`.
 
 ## Output
 

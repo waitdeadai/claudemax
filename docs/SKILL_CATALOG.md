@@ -95,3 +95,9 @@ Before adding a new skill:
 4. **Distinct from CLI commands** — does this need to be a slash command in Claude Code, or just a `cmax X` CLI command?
 
 If you add a skill, justify in this doc with a one-line "Distinct from" entry.
+
+## Audit verdicts — third-party skill sources (don't re-litigate)
+
+| Source | Verdict | Rationale |
+|---|---|---|
+| `addyosmani/agent-skills` → `code-simplification` (2026-06-09) | **WRAP, no new skill** | It is itself a derivative of the Anthropic-official `code-simplifier` agent, and this harness already ships native `/simplify`. A 32nd skill would duplicate both. The additive discipline (Chesterton's Fence, Rule of 500, tests-modified=behavior-changed) was folded into a behavior-gated pipeline pass + `/review`. See `docs/SPEC-SIMPLIFY-PASS.md`. |

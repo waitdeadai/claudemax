@@ -20,6 +20,7 @@ import {
   deepResearch,
   decomposeIntoMultiSpec,
   runTddCycle,
+  runSimplifyPass,
   runAgentTeams,
   writeHandoff,
   isSaturationSignal,
@@ -55,6 +56,7 @@ export function runCommand(): Command {
     .option("--mvp", "opt out of the production-ready bar (PRC): sub-Specs keep only their explicit completion conditions — MVP is the exception, not the default", false)
     .option("--ssc", "Specification Self-Correction: harden each sub-Spec (tighten gameable verifyHints, add edge/failure coverage) before execution, and re-examine a verify that passed too easily", false)
     .option("--tdd", "enforce write-failing-test-first cycle per sub-Spec where a test verifyHint exists", false)
+    .option("--simplify", "behavior-gated simplify pass between build and verify (≤2 rounds; auto-on for --variant opusolo, set CMAX_NO_SIMPLIFY=1 to disable that). Reverts any round that touches a test or reddens the suite", false)
     .option("--confidence <n>", "verifier confidence threshold for primary findings (0..1)", "0.8")
     .option("--adversarial", "adversarial verify: stress-test the blind verifier with fabricated-claim mutants + isomorphic restatement, and downgrade any condition it can be fooled about", false)
     .option("--memory <path>", "memory db path", ".claudemax/memory.sqlite")
@@ -73,6 +75,7 @@ export function runCommand(): Command {
           mvp: boolean;
           ssc: boolean;
           tdd: boolean;
+          simplify: boolean;
           confidence: string;
           adversarial: boolean;
           memory: string;
@@ -95,7 +98,7 @@ export function runCommand(): Command {
 
         console.log(
           kleur.dim(
-            `plan=${plan.plan} billing=${plan.billing} era=${era} credit=${plan.monthlyCreditUsd ?? "n/a"}/mo variant=${opts.variant} exec=${execModel} effort=${effort} mode=${opts.mode} tdd=${opts.tdd ? "on" : "off"} conf>=${confidenceThreshold}`,
+            `plan=${plan.plan} billing=${plan.billing} era=${era} credit=${plan.monthlyCreditUsd ?? "n/a"}/mo variant=${opts.variant} exec=${execModel} effort=${effort} mode=${opts.mode} tdd=${opts.tdd ? "on" : "off"} simplify=${opts.simplify || opts.variant === "opusolo" ? "on" : "off"} conf>=${confidenceThreshold}`,
           ),
         );
 
@@ -247,6 +250,43 @@ export function runCommand(): Command {
             blockers: subResults.filter((r) => r.status !== "finished").map((r) => r.id),
             artifacts: Object.fromEntries(subResults.map((r) => [r.id, r.status])),
           });
+
+          // Behavior-gated simplify pass (post-build, pre-verify). Opt-in; auto-on
+          // for opusolo. Bounded to ≤2 rounds (the SOTA front-loaded-gains window);
+          // any round that touches a test or reddens the suite is reverted. Solo
+          // mode only — Mode B teammates work in isolated worktrees, so the lead's
+          // cwd diff would not reflect their changes.
+          const doSimplify =
+            opts.simplify ||
+            (opts.variant === "opusolo" && process.env["CMAX_NO_SIMPLIFY"] !== "1");
+          if (doSimplify && effectiveMode === "teams") {
+            console.log(kleur.dim("→ simplify pass skipped (Mode B / Agent Teams use isolated worktrees)"));
+          } else if (doSimplify) {
+            console.log(kleur.cyan("→ simplify pass (behavior-gated, ≤2 rounds, post-build/pre-verify)"));
+            const simp = await runSimplifyPass({
+              cwd,
+              model: execModel,
+              effort,
+              permissionMode,
+            });
+            const col =
+              simp.status === "applied"
+                ? kleur.green
+                : simp.status === "reverted"
+                  ? kleur.yellow
+                  : kleur.dim;
+            console.log(col(`  simplify: ${simp.status} — ${simp.reason}`));
+            for (const e of simp.evidence) console.log(kleur.dim(`    ${e}`));
+            writeHandoff({
+              cwd,
+              rootGoal: goal,
+              phase: "simplify",
+              previousPhase: "goal",
+              summary: `simplify ${simp.status} (${simp.rounds} round(s), oracle=${simp.oracle}): ${simp.reason}`,
+              nextInputs: simp.evidence,
+              artifacts: { status: simp.status, rounds: String(simp.rounds), oracle: simp.oracle },
+            });
+          }
 
           let rollupVerdict: "verified" | "partial" | "failed" | "unverified" | "skipped" = "skipped";
           if (opts.verify) {
