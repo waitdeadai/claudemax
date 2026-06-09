@@ -1,6 +1,6 @@
 ---
 name: route
-description: Show the model-routing decision for a task (Opus/Sonnet/Haiku) with reasoning. Use before launching a packet to sanity-check the tier and to override when you have stronger judgment than the heuristic.
+description: Show the model-routing decision for a task (Fable/Opus/Sonnet/Haiku) with reasoning. Use before launching a packet to sanity-check the tier and to override when you have stronger judgment than the heuristic.
 ---
 
 # /route — model routing decision
@@ -25,10 +25,20 @@ Surface the routing decision so the human (or the orchestrator) can confirm or o
 - security/auth/payments/secrets domain
 - explicit `--tier opus` or `--opus` user signal
 
-## Demotion triggers (Opus → Sonnet)
+## Escalation triggers (Opus → Fable 5)
 
-- `--cheap` / forceCheap mode AND class is not `verify` or `spec`
-- cost ceiling exceeded AND Sonnet estimate fits AND class is not `verify` or `spec`
+Fable 5 (`claude-fable-5`, launched 2026-06-09, 2× Opus price) is escalation-only — never a baseline:
+
+- `--long-horizon` on `plan` / `debug-hard` — work larger than a single sitting (overnight runs, multi-day converge loops, ambiguous root-cause hunts)
+- explicit `--tier fable`
+- NEVER for security domains (Fable's safety classifiers fall back to Opus anyway; headless requests get refusals) and NEVER for `verify`/`spec`/`architect` (pinned to Opus)
+- after 2026-06-22 Fable bills to usage credits on Max — the route reason flags this
+
+## Demotion triggers (Fable/Opus → cheaper)
+
+- `--cheap` / forceCheap mode AND class is not `verify` or `spec` → Sonnet
+- plan-budget guard demotes one rung (fable→opus, opus→sonnet); danger/blocked → Sonnet
+- cost ceiling exceeded AND a cheaper tier fits AND class is not `verify` or `spec` (fable tries opus first, then sonnet)
 
 ## Never demote
 

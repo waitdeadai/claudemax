@@ -53,6 +53,11 @@ export function loopCommand(): Command {
     .option("--adversarial", "adversarial rollup verify (pipeline body only)", false)
     .option("--mvp", "MVP bar instead of production-ready (pipeline body only)", false)
     .option("--opusolo", "run the executor on Opus too (higher ceiling, higher cost)", false)
+    .option(
+      "--fable",
+      "run the executor on Fable 5 — the long-horizon ceiling (2× Opus; usage-credit billed after 2026-06-22)",
+      false,
+    )
     .action(
       async (
         goal: string,
@@ -67,10 +72,22 @@ export function loopCommand(): Command {
           adversarial: boolean;
           mvp: boolean;
           opusolo: boolean;
+          fable: boolean;
         },
       ) => {
         const cwd = process.cwd();
-        const model = opts.opusolo ? MODELS.opus.id : undefined;
+        const model = opts.fable
+          ? MODELS.fable.id
+          : opts.opusolo
+            ? MODELS.opus.id
+            : undefined;
+        if (opts.fable) {
+          console.log(
+            kleur.yellow(
+              "  fable: executor = claude-fable-5 (2× Opus; included on Max only through 2026-06-22, usage credits after)",
+            ),
+          );
+        }
 
         if (opts.lean) {
           console.log(kleur.cyan(`→ loop run --lean: constructing spec for "${goal.slice(0, 60)}"…`));

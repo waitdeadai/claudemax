@@ -75,6 +75,19 @@ const NEVER_DEMOTE: ReadonlySet<TaskClass> = new Set([
   "architect",
 ]);
 
+// Fable 5 (launched 2026-06-09) is a fourth tier ABOVE Opus, not a new default:
+// Anthropic's own selection matrix keeps Opus/Sonnet/Haiku as the three rows and
+// positions Fable as the escalation for "the most demanding reasoning and
+// long-horizon agentic tasks" (platform.claude.com choosing-a-model +
+// code.claude.com model-config, accessed 2026-06-09). Baselines stay untouched;
+// Fable is reachable only via signal.longHorizon on these judgment classes, or
+// an explicit tier override. verify/spec/architect stay PINNED to Opus by house
+// rule #4 — neither demoted nor auto-escalated (use --tier fable to override).
+const LONG_HORIZON_FABLE: ReadonlySet<TaskClass> = new Set([
+  "plan",
+  "debug-hard",
+]);
+
 export interface RouterOptions {
   readonly explicitTier?: ModelTier;
   readonly costCeilingUsd?: number;
@@ -120,11 +133,27 @@ export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecisi
         reasons.push(`security-domain=${signal.domain}→opus`);
       }
     }
+    // Security domains stay on Opus even when long-horizon: Fable's safety
+    // classifiers fall back to Opus 4.8 on cybersecurity-shaped requests anyway,
+    // and in SDK/headless mode a flagged request ends the turn with a refusal
+    // (code.claude.com/docs/en/model-config, accessed 2026-06-09).
+    const securityDomain =
+      signal.domain != null && SECURITY_DOMAINS.has(signal.domain.toLowerCase());
+    if (
+      tier === "opus" &&
+      signal.longHorizon &&
+      LONG_HORIZON_FABLE.has(signal.class) &&
+      !securityDomain
+    ) {
+      tier = "fable";
+      escalated = true;
+      reasons.push(`long-horizon ${signal.class}→fable (2× opus; usage-credit billed after 2026-06-22)`);
+    }
   }
 
   if (
     opts.forceCheap &&
-    tier === "opus" &&
+    (tier === "opus" || tier === "fable") &&
     !NEVER_DEMOTE.has(signal.class)
   ) {
     tier = "sonnet";
@@ -132,7 +161,7 @@ export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecisi
     reasons.push(`forceCheap & not-never-demote→sonnet`);
   }
 
-  if (opts.plan && opts.creditConsumedUsd != null && tier === "opus" && !NEVER_DEMOTE.has(signal.class)) {
+  if (opts.plan && opts.creditConsumedUsd != null && (tier === "opus" || tier === "fable") && !NEVER_DEMOTE.has(signal.class)) {
     const era = opts.era ?? resolveBillingEra();
     const tag = budgetTag(opts.plan, opts.creditConsumedUsd, era);
     if (tag === "danger" || tag === "blocked") {
@@ -141,10 +170,13 @@ export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecisi
       demoted = true;
       reasons.push(`plan-budget=${tag} (consumed=${opts.creditConsumedUsd.toFixed(2)})→sonnet ($${sonnetEst.toFixed(3)})`);
     } else if (tag === "guard") {
-      const sonnetEst = estimatePacketCost("sonnet", signal.complexity);
-      tier = "sonnet";
+      // Guard demotes one rung: fable→opus keeps judgment quality while
+      // shedding the 2× premium; opus→sonnet as before.
+      const target: ModelTier = tier === "fable" ? "opus" : "sonnet";
+      const targetEst = estimatePacketCost(target, signal.complexity);
+      tier = target;
       demoted = true;
-      reasons.push(`plan-budget=guard (≥70%)→sonnet ($${sonnetEst.toFixed(3)})`);
+      reasons.push(`plan-budget=guard (≥70%)→${target} ($${targetEst.toFixed(3)})`);
     }
   }
 
@@ -152,14 +184,20 @@ export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecisi
   if (
     opts.costCeilingUsd != null &&
     estCostNow > opts.costCeilingUsd &&
-    tier === "opus" &&
+    (tier === "opus" || tier === "fable") &&
     !NEVER_DEMOTE.has(signal.class)
   ) {
+    const wasTier = tier;
+    const opusEst = estimatePacketCost("opus", signal.complexity);
     const sonnetEst = estimatePacketCost("sonnet", signal.complexity);
-    if (sonnetEst <= opts.costCeilingUsd) {
+    if (tier === "fable" && opusEst <= opts.costCeilingUsd) {
+      tier = "opus";
+      demoted = true;
+      reasons.push(`cost-ceiling=$${opts.costCeilingUsd.toFixed(2)} < fable=$${estCostNow.toFixed(2)}→opus=$${opusEst.toFixed(2)}`);
+    } else if (sonnetEst <= opts.costCeilingUsd) {
       tier = "sonnet";
       demoted = true;
-      reasons.push(`cost-ceiling=$${opts.costCeilingUsd.toFixed(2)} < opus=$${estCostNow.toFixed(2)}→sonnet=$${sonnetEst.toFixed(2)}`);
+      reasons.push(`cost-ceiling=$${opts.costCeilingUsd.toFixed(2)} < ${wasTier}=$${estCostNow.toFixed(2)}→sonnet=$${sonnetEst.toFixed(2)}`);
     }
   }
 

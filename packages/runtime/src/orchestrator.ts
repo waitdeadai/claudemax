@@ -112,6 +112,9 @@ async function runPacket(
     effort: opts.effort,
     // Opus 4.8 ships "fewer subagents spawned by default"; nudge adaptive thinking
     // for routes that escalate to opus so the model reasons before calling tools.
+    // Fable 5 is adaptive-only and applies it when the param is unset — omit it
+    // there; thinking:{type:"disabled"} is unsupported on Fable
+    // (platform.claude.com introducing-claude-fable-5, accessed 2026-06-09).
     thinking: decision.tier === "opus" ? "adaptive" : undefined,
     // Same deadlock fix as runGoal: this packet worker emits a prose EVIDENCE/STATUS
     // closeout that the user-facing no-vibes Stop hook blocks (→ runs to the turn
@@ -125,7 +128,9 @@ async function runPacket(
       prompt: `Execute packet: ${packet.title}\n\nInputs:\n${packet.inputs.map((i) => "- " + i).join("\n") || "(none)"}\n\nExpected outputs:\n${packet.outputs.map((o) => "- " + o).join("\n") || "(none)"}`,
       options: {
         model: decision.model,
-        fallbackModel: MODELS.sonnet.id,
+        // Fable packets fall back to Opus (mirrors Claude Code's own
+        // classifier-fallback target); everything else falls back to Sonnet.
+        fallbackModel: decision.tier === "fable" ? MODELS.opus.id : MODELS.sonnet.id,
         systemPrompt: {
           type: "preset",
           preset: "claude_code",

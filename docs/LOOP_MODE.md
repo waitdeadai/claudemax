@@ -33,6 +33,10 @@ By default `cmax loop run "<goal>"` loops your **whole** `cmax ask` workflow:
 cmax loop run "build X end to end"                       # full pipeline, looped
 cmax loop run "build X" --max-passes 6 --max-credit 80 --ssc --adversarial --opusolo
 cmax loop run "build X" --no-research                    # skip deepresearch in CONSTRUCT
+cmax loop run "migrate the whole billing system" --fable # executor = Fable 5: the
+#   long-horizon ceiling ("the longer and more complex the task, the larger Fable 5's
+#   lead" — Anthropic, 2026-06-09). 2× Opus price; included on Max only through
+#   2026-06-22, usage credits after. See docs/MODEL_ROUTING.md § Fable 5.
 ```
 
 ### `--lean` — single-spec converge-loop (the lighter body)

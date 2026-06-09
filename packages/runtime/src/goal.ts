@@ -52,8 +52,13 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
   process.stderr.write(`  [goal] turn cap = ${maxTurns}\n`);
   const execModel = opts.model ?? MODELS.opus.id;
   const execTier = modelById(execModel).tier;
-  // Fallback to the other major tier so an overload on the executor still makes progress.
-  const fallbackModel = execModel === MODELS.sonnet.id ? MODELS.opus.id : MODELS.sonnet.id;
+  // Fallback to the adjacent tier so an overload on the executor still makes
+  // progress. Fable falls back to Opus — the same target Claude Code's own
+  // safety-classifier fallback uses (model-config docs, accessed 2026-06-09).
+  const fallbackModel =
+    execModel === MODELS.sonnet.id || execModel === MODELS.fable.id
+      ? MODELS.opus.id
+      : MODELS.sonnet.id;
   // Enforce maxTurns deterministically at OUR layer. The SDK's maxTurns option does
   // not reliably bound a goal loop that fans out via the Agent tool (observed: a run
   // capped at 150 reached 235+). We abort the stream ourselves when the turn counter

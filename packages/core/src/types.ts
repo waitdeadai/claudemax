@@ -1,6 +1,7 @@
-export type ModelTier = "opus" | "sonnet" | "haiku";
+export type ModelTier = "fable" | "opus" | "sonnet" | "haiku";
 
 export type ModelId =
+  | "claude-fable-5"
   | "claude-opus-4-8"
   | "claude-sonnet-4-6"
   | "claude-haiku-4-5-20251001";
@@ -38,6 +39,12 @@ export type BillingEra = "pre-split" | "post-split";
 
 export const BILLING_SPLIT_CUTOVER_ISO = "2026-06-15T00:00:00Z";
 
+// Fable 5 is included on Pro/Max/Team/Enterprise "at no extra cost" only from
+// launch (2026-06-09) through 2026-06-22; after that it bills to usage credits
+// even where Opus/Sonnet still draw from the subscription pool
+// (anthropic.com/news/claude-fable-5-mythos-5, accessed 2026-06-09).
+export const FABLE_INCLUDED_UNTIL_ISO = "2026-06-22T23:59:59Z";
+
 export interface PlanInfo {
   readonly plan: Plan;
   readonly billing: BillingMode;
@@ -53,6 +60,11 @@ export interface TaskSignal {
   readonly domain?: string;
   readonly priorFailure?: boolean;
   readonly explicitTier?: ModelTier;
+  // True for work "larger than a single sitting" — overnight runs, multi-day
+  // converge loops, ambiguous root-cause hunts. The router uses this to
+  // escalate Opus-baseline judgment classes to Fable 5, per Anthropic's
+  // model-selection guidance (choosing-a-model, accessed 2026-06-09).
+  readonly longHorizon?: boolean;
   readonly summary: string;
 }
 

@@ -14,11 +14,32 @@ export interface ModelSpec {
 }
 
 // Pricing verified against https://platform.claude.com/docs/en/about-claude/models/overview
-// on 2026-05-28 (Opus 4.8 launch day). Opus 4.8 input $5 / output $25 — UNCHANGED from
-// Opus 4.7. Sonnet 4.6 input $3 / output $15; Haiku 4.5 input $1 / output $5. Cache write
-// 5m = 1.25× base input; 1h = 2× base input; cache read = 0.10× base input
+// on 2026-05-28 (Opus 4.8 launch day) and re-verified 2026-06-09 (Fable 5 launch day).
+// Fable 5 input $10 / output $50 (2× Opus 4.8, no long-context premium for 1M).
+// Opus 4.8 input $5 / output $25 — UNCHANGED from Opus 4.7. Sonnet 4.6 input $3 /
+// output $15; Haiku 4.5 input $1 / output $5. Cache write 5m = 1.25× base input;
+// 1h = 2× base input; cache read = 0.10× base input
 // (https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
 export const MODELS: Readonly<Record<ModelTier, ModelSpec>> = {
+  fable: {
+    tier: "fable",
+    id: "claude-fable-5",
+    inputPer1MUsd: 10,
+    outputPer1MUsd: 50,
+    cachedInputPer1MUsd: 1,
+    cacheWrite5mPer1MUsd: 12.5,
+    cacheWrite1hPer1MUsd: 20,
+    contextWindow: 1_000_000,
+    maxOutput: 128_000,
+    strengths: [
+      "long-horizon agentic work (tasks larger than a single sitting)",
+      "ambiguous root-cause investigation",
+      "outcome-driven autonomy (describe the outcome, not the steps)",
+      "self-verification without reminders",
+      "codebase-scale migration",
+      "1M token context",
+    ],
+  },
   opus: {
     tier: "opus",
     id: "claude-opus-4-8",
@@ -76,14 +97,20 @@ export const MODELS: Readonly<Record<ModelTier, ModelSpec>> = {
   },
 };
 
-export const SHORT_NAME_BY_TIER: Readonly<Record<ModelTier, "opus" | "sonnet" | "haiku">> = {
+// "fable" is a Claude Code CLI alias (model-config docs, accessed 2026-06-09)
+// but NOT yet a documented Agent SDK query() alias — SDK call sites must pass
+// the full id MODELS.fable.id ("claude-fable-5"), never the short name.
+export const SHORT_NAME_BY_TIER: Readonly<
+  Record<ModelTier, "fable" | "opus" | "sonnet" | "haiku">
+> = {
+  fable: "fable",
   opus: "opus",
   sonnet: "sonnet",
   haiku: "haiku",
 };
 
 export function modelById(id: ModelId): ModelSpec {
-  for (const tier of ["opus", "sonnet", "haiku"] as const) {
+  for (const tier of ["fable", "opus", "sonnet", "haiku"] as const) {
     if (MODELS[tier].id === id) return MODELS[tier];
   }
   throw new Error(`Unknown model id: ${id}`);

@@ -1,6 +1,6 @@
 import { MODELS } from "./models.js";
 import type { BillingEra, ModelTier, Plan } from "./types.js";
-import { BILLING_SPLIT_CUTOVER_ISO } from "./types.js";
+import { BILLING_SPLIT_CUTOVER_ISO, FABLE_INCLUDED_UNTIL_ISO } from "./types.js";
 
 // Auto-resolve the billing era from the current date. Anthropic's announced
 // cutover is 2026-06-15 (support.claude.com article 15036540 +
@@ -11,6 +11,16 @@ export function resolveBillingEra(now: Date = new Date()): BillingEra {
   const override = process.env["CMAX_BILLING_ERA"];
   if (override === "pre-split" || override === "post-split") return override;
   return now.getTime() >= Date.parse(BILLING_SPLIT_CUTOVER_ISO) ? "post-split" : "pre-split";
+}
+
+// Fable 5 billing is orthogonal to the pre-/post-split eras: it is included on
+// Pro/Max/Team/Enterprise at no extra cost ONLY through 2026-06-22, after which
+// Fable usage bills to usage credits — real incremental spend even while
+// Opus/Sonnet still draw from the shared subscription pool
+// (anthropic.com/news/claude-fable-5-mythos-5, accessed 2026-06-09). Callers
+// surfacing Fable routing decisions should warn when this returns true.
+export function fableOnUsageCredits(now: Date = new Date()): boolean {
+  return now.getTime() > Date.parse(FABLE_INCLUDED_UNTIL_ISO);
 }
 
 export interface UsageEstimate {

@@ -9,7 +9,8 @@ export function routeCommand(): Command {
     .option("--complexity <n>", "1-10", "5")
     .option("--novelty <n>", "1-10", "3")
     .option("--domain <name>", "auth, payments, ui, ...")
-    .option("--tier <tier>", "force opus|sonnet|haiku")
+    .option("--tier <tier>", "force fable|opus|sonnet|haiku")
+    .option("--long-horizon", "task larger than a single sitting (escalates plan/debug-hard to Fable 5)")
     .option("--cost-ceiling <usd>", "demote to cheaper tier if estimated cost exceeds")
     .option("--cheap", "force cheap mode (demote opus → sonnet outside verify/spec)")
     .action(
@@ -22,6 +23,7 @@ export function routeCommand(): Command {
           tier?: string;
           costCeiling?: string;
           cheap?: boolean;
+          longHorizon?: boolean;
         },
       ) => {
         const cls: TaskClass = classifyHeuristic(summary);
@@ -31,6 +33,7 @@ export function routeCommand(): Command {
             complexity: Number(opts.complexity),
             novelty: Number(opts.novelty),
             domain: opts.domain,
+            longHorizon: opts.longHorizon,
             summary,
           },
           {
@@ -54,6 +57,7 @@ export function routeCommand(): Command {
 }
 
 function tierColor(t: ModelTier): string {
+  if (t === "fable") return kleur.yellow(t);
   if (t === "opus") return kleur.magenta(t);
   if (t === "sonnet") return kleur.blue(t);
   return kleur.gray(t);
