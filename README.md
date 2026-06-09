@@ -18,7 +18,7 @@ cmax ask "migrate the auth layer to passkeys with passing tests end-to-end"
 ```
 
 One command. The pipeline runs:
-**`/deepresearch`** (web-current, sourced) → **multispec decompose** (Opus authors N sub-Specs + DAG) → **`/specqa`** (mechanically-checkable verifyHints) → **`/introspect`** (confidence + assumption hard-gate) → **parallel `/goal`** per DAG leaf (Mode A SDK subagents or Mode B Claude Code Agent Teams, auto-selected) → **per-sub-Spec `/verify`** (blind Opus) → **rollup `/verify`** (blind Opus against integration conditions). Bundled [dark-patterns hooks](https://github.com/waitdeadai/llm-dark-patterns) (35 of them) block vibes, fake citations, aggregator hallucination, and credential leaks throughout.
+**`/deepresearch`** (web-current, sourced) → **multispec decompose** (Fable 5 authors N sub-Specs + DAG while included on Max →2026-06-22; Opus after) → **`/specqa`** (mechanically-checkable verifyHints) → **`/introspect`** (confidence + assumption hard-gate) → **parallel `/goal`** per DAG leaf (Mode A SDK subagents or Mode B Claude Code Agent Teams, auto-selected) → **per-sub-Spec `/verify`** (blind Opus) → **rollup `/verify`** (blind Opus against integration conditions). Bundled [dark-patterns hooks](https://github.com/waitdeadai/llm-dark-patterns) (35 of them) block vibes, fake citations, aggregator hallucination, and credential leaks throughout.
 
 Power-user flags live on `cmax run` (same engine; `cmax ask` is the friendly entry point):
 
@@ -75,8 +75,8 @@ Both auto-run the full pipeline. They differ only in sub-Spec /goal exec tier (a
 
 | Umbrella | Plan/judge | Sub-Spec /goal exec | Verify | When |
 |---|---|---|---|---|
-| `/cmax` | Opus | **Sonnet** | Opus | Default (`/ask` is the friendly-verb entry to the same engine) |
-| `/opusolo` | Opus | **Opus** | Opus | Max effectiveness; auth/payments/novel-domain |
+| `/cmax` | Fable 5 →2026-06-22, then Opus | **Sonnet** | Opus | Default (`/ask` is the friendly-verb entry to the same engine) |
+| `/opusolo` | Fable 5 →2026-06-22, then Opus | **Opus** | Opus | Max effectiveness; auth/payments/novel-domain |
 
 > The v1 muscle-memory aliases `/workflow` and `/opussonnet` were removed 2026-05-28 (`/workflow` collided with Claude Code's native **Workflow tool**; both were identical to `/cmax`). Use `/cmax` or `/ask`. The `opussonnet`/`opusolo` model-routing **variants** remain via `cmax run --variant`.
 

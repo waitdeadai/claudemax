@@ -52,8 +52,8 @@ user goal
    │
    ▼
 ┌──────────────────────────┐
-│ multispec decompose       │  Opus → MultiSpec: N sub-Specs + DAG + rollup
-│ (Opus + json_schema)      │  conditions + writeSet per sub-Spec
+│ multispec decompose       │  Fable 5 (→2026-06-22; Opus after) → MultiSpec:
+│ (json_schema output)      │  N sub-Specs + DAG + rollup conds + writeSets
 └──────────────────────────┘
    │
    ▼

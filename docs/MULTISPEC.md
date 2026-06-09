@@ -9,7 +9,7 @@ user goal (large)
    ↓
 1. /deepresearch (Sonnet collects, Opus synthesizes)         → ResearchBrief + source ledger
    ↓
-2. multispec decompose (Opus authors)                         → MultiSpec: N sub-Specs + DAG + rollup conditions + writeSet per sub-Spec
+2. multispec decompose (Fable 5 authors while included →2026-06-22; Opus after)                         → MultiSpec: N sub-Specs + DAG + rollup conditions + writeSet per sub-Spec
    ↓
 3. /specqa (parallel; one Haiku worker per sub-Spec)          → quality gate: verifyHints must be mechanically checkable
    ↓

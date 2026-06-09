@@ -12,7 +12,7 @@ Identical pipeline to /cmax, but Opus executes the sub-Spec /goal loops instead 
 ## Pipeline
 
 1. /deepresearch (Opus synthesis)
-2. multispec decompose (Opus authors)
+2. multispec decompose (Fable 5 authors while included →2026-06-22; Opus after)
 3. /specqa + /introspect gates (Opus)
 4. parallel /goal per DAG leaf — **Opus 4.8 executes**
 5. per-sub-Spec /verify (Opus, blind)
