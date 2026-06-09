@@ -29,9 +29,9 @@ The umbrella. You describe what you want; the pipeline produces it — **0 → p
 | Skill | Routing |
 |---|---|
 | `/cmax` | Default — Opus plan + Sonnet exec + Opus verify |
-| `/workflow` | Alias for /cmax (v1 muscle memory) |
-| `/opussonnet` | Same as /cmax — your v1 muscle-memory name |
 | `/opusolo` | Opus exec for sub-Specs too (max effectiveness, ~3× cost) |
+
+> The `/workflow` + `/opussonnet` aliases were removed 2026-05-28; the `opussonnet`/`opusolo` exec-tier variants remain via `cmax run --variant`. For long-horizon converge loops there is a tier above Opus: Fable 5 via `cmax loop run --fable` or `--tier fable` (escalation-only, 2× Opus, usage-credit billed on Max after 2026-06-22 — see `docs/MODEL_ROUTING.md`).
 
 ## Hard rules
 

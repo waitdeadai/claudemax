@@ -65,7 +65,7 @@ Inherited from [minmaxing](https://github.com/waitdeadai/minmaxing), sharpened f
 
 1. **Spec before goal.** Every autonomous run starts with a multispec — measurable completion conditions with mechanically-checkable verifyHints. `/goal` without a SPEC is a credit card on fire.
 2. **Multispec as default.** Decompose big goals into 2–12 verifiable sub-Specs with a DAG. Parallel `/goal` per leaf. Rollup verify catches "all sub-Specs pass but integration fails."
-3. **Route by intent, not vibes.** Opus for plan/spec/verify/architect/debug-hard. Sonnet for routine implementation. Haiku for search/classify. Escalate on novelty/security/prior-failure. Demote when monthly credit > 70/90/95%, never `/verify` or `/spec` or `/architect`.
+3. **Route by intent, not vibes.** Opus for plan/spec/verify/architect/debug-hard. Sonnet for routine implementation. Haiku for search/classify. **Fable 5** (added launch day 2026-06-09) is the escalation-only fourth tier above Opus for long-horizon work — `plan`/`debug-hard` packets flagged long-horizon, `cmax loop run --fable`, or explicit `--tier fable`; never a baseline, never for security domains, 2× Opus price (usage-credit billed on Max after 2026-06-22). Escalate on novelty/security/prior-failure. Demote when monthly credit > 70/90/95%, never `/verify` or `/spec` or `/architect`. See [Model routing](./docs/MODEL_ROUTING.md).
 4. **Max parallel by default.** Hardware + credit-aware cap. Two modes auto-selected: SDK subagents (Mode A) for ≤5 sub-Specs / short runs, Claude Code Agent Teams (Mode B) for big multi-day swarms with shared task list + worktree isolation.
 5. **Independent verification.** Blind Opus session re-reads the repo and re-checks every completion condition. The verifier did not do the implementation — that's the point.
 
@@ -106,6 +106,7 @@ Clones to `$env:USERPROFILE\.claudemax`, builds, writes `cmax.cmd` + `claudemax.
 | `effort` | `xhigh` | Anthropic's recommended tier for agentic/coding work on Opus 4.8 — above the `high` default; `max` is opt-in only (`--effort max`) |
 | plan / judge / verify | Opus 4.8 | never demoted, regardless of credit % or `--cheap` |
 | sub-Spec exec | Opus 4.8 (pre-split) / Sonnet 4.6 (post-split) | era-aware: shares one pool until 2026-06-15 so opussonnet executes on Opus 4.8; reverts to Sonnet post-split. `--variant opusolo` forces Opus always; router still escalates per task on novelty / security / complexity ≥ 7 |
+| long-horizon ceiling | Fable 5 (`claude-fable-5`), opt-in | escalation-only fourth tier above Opus (launched 2026-06-09; $10/$50 per MTok = 2× Opus; 1M ctx). Reached via long-horizon `plan`/`debug-hard` routing, `cmax loop run --fable`, or `--tier fable`. Free on Max only through 2026-06-22, then usage credits. Security domains stay on Opus (Fable's classifiers fall back there anyway) |
 
 ### Remote-from-phone install (one command, full ceremony)
 
@@ -338,6 +339,8 @@ cmax tdd SPEC.md                           # strict test-first cycle (write fail
 cmax verify SPEC.md --confidence 0.85      # blind Opus verify pass
 cmax dispatch <plan.json>                  # low-level parallel packet fan-out
 cmax route "<task>" --complexity 6         # inspect router decision
+cmax route "<task>" --long-horizon         # long-horizon plan/debug-hard → Fable 5
+cmax loop run "<goal>" --fable             # converge-loop executor on Fable 5 (long-horizon ceiling)
 
 cmax memory search "<query>"               # FTS5 search across memory
 cmax memory runs --limit 20                # recent runs
