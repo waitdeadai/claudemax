@@ -28,10 +28,10 @@ The umbrella. You describe what you want; the pipeline produces it — **0 → p
 
 | Skill | Routing |
 |---|---|
-| `/cmax` | Default — Opus plan + Sonnet exec + Opus verify |
+| `/cmax` | Default — Fable 5 plan/decompose (while included on Max, →2026-06-22; Opus after) + Sonnet/Opus exec per era + Opus verify |
 | `/opusolo` | Opus exec for sub-Specs too (max effectiveness, ~3× cost) |
 
-> The `/workflow` + `/opussonnet` aliases were removed 2026-05-28; the `opussonnet`/`opusolo` exec-tier variants remain via `cmax run --variant`. For long-horizon converge loops there is a tier above Opus: Fable 5 via `cmax loop run --fable` or `--tier fable` (escalation-only, 2× Opus, usage-credit billed on Max after 2026-06-22 — see `docs/MODEL_ROUTING.md`).
+> The `/workflow` + `/opussonnet` aliases were removed 2026-05-28; the `opussonnet`/`opusolo` exec-tier variants remain via `cmax run --variant`. Fable 5 defaults auto-demote to Opus on 2026-06-23 when Fable bills usage credits (`CMAX_FABLE_ACCESS=included|credits` flips the configurations); `cmax loop run --fable` / `--tier fable` reach Fable explicitly in both modes — see `docs/MODEL_ROUTING.md`.
 
 ## Hard rules
 

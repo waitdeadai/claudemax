@@ -4,23 +4,39 @@ Router lives in `packages/core/src/router.ts`. Legible heuristics: baseline tabl
 
 ## Fable 5 — the fourth tier (added 2026-06-09, launch day)
 
-Claude Fable 5 (`claude-fable-5`) sits ABOVE Opus, not in the baseline table.
-Anthropic's own selection matrix keeps Opus/Sonnet/Haiku as the three rows and
-positions Fable as the escalation for "the most demanding reasoning and
-long-horizon agentic tasks" ([choosing-a-model](https://platform.claude.com/docs/en/about-claude/models/choosing-a-model),
+Claude Fable 5 (`claude-fable-5`) is a fourth tier ABOVE Opus, positioned by
+Anthropic for "the most demanding reasoning and long-horizon agentic tasks"
+([choosing-a-model](https://platform.claude.com/docs/en/about-claude/models/choosing-a-model),
 [model-config](https://code.claude.com/docs/en/model-config), accessed 2026-06-09).
-The harness mirrors that: **baselines unchanged; Fable is escalation-only.**
 
-When Fable is invoked:
+**Two configurations, auto-switched by `resolveFableAccess()` on 2026-06-23**
+(override either way: `CMAX_FABLE_ACCESS=included|credits`):
 
+| | `included` (now → 2026-06-22, Fable free on Max) | `credits` (2026-06-23 →, Fable bills usage credits) |
+|---|---|---|
+| `plan` baseline | **Fable 5** | Opus 4.8 (auto-demoted) |
+| multispec decompose | **Fable 5** | Opus 4.8 |
+| `longHorizon` plan/debug-hard | escalates to Fable | stays Opus |
+| explicit `--tier fable` / `loop run --fable` | Fable | Fable (deliberate opt-in spend) |
+| verify / spec / architect | Opus 4.8, pinned | Opus 4.8, pinned |
+| execution (implement/refactor/test) | Sonnet/Opus per billing era | Sonnet/Opus per billing era |
+
+When Anthropic folds Fable back into subscription/credit access, flip
+`CMAX_FABLE_ACCESS=included` (or ship a cutover-date update) to restore the
+Fable defaults.
+
+When Fable is invoked (in the `included` configuration):
+
+- `plan`-class packets — decomposition quality propagates to every downstream
+  packet; planning is the "most demanding reasoning" Fable is positioned for.
 - `signal.longHorizon: true` on a `plan` or `debug-hard` packet (work "larger
   than a single sitting": overnight/`cmax overnight` runs, multi-day converge
   loops, ambiguous root-cause hunts) — auto-escalates opus→fable.
 - Explicit override: `--tier fable` / `signal.explicitTier: "fable"` (the route
   for architecture decisions, since `/architect` stays pinned to Opus by house
-  rule #4).
+  rule #4). Explicit opt-in works in BOTH configurations.
 
-When Fable is NOT invoked:
+When Fable is NOT invoked (either configuration):
 
 - `verify` / `spec` / `architect` — pinned to Opus (house rule #4), neither
   demoted nor auto-escalated.
@@ -47,7 +63,7 @@ Requires Claude Code ≥ 2.1.170.
 
 | Task class | Tier | Why |
 |---|---|---|
-| `plan` | Opus | Reasoning over goal-sized context |
+| `plan` | Fable 5 while `included`, else Opus | Decomposition quality propagates downstream; auto-demotes when Fable bills usage credits |
 | `architect` | Opus | Multi-file, multi-system design |
 | `spec` | Opus | The contract; worth the spend |
 | `verify` | Opus | Independent skepticism (supervisor) |

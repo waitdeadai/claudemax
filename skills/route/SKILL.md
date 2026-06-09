@@ -11,7 +11,8 @@ Surface the routing decision so the human (or the orchestrator) can confirm or o
 
 | Class               | Tier   | Reason                                          |
 |---------------------|--------|-------------------------------------------------|
-| plan, architect, spec | Opus | reasoning + spec authorship                     |
+| plan                | Fable 5 while included (→2026-06-22), else Opus | decomposition quality propagates downstream |
+| architect, spec     | Opus   | reasoning + spec authorship (pinned)            |
 | verify, audit       | Opus   | independent skepticism                          |
 | debug-hard          | Opus   | subtle, multi-cause                             |
 | implement, refactor, test | Sonnet | routine coding, fast and capable           |
@@ -25,14 +26,13 @@ Surface the routing decision so the human (or the orchestrator) can confirm or o
 - security/auth/payments/secrets domain
 - explicit `--tier opus` or `--opus` user signal
 
-## Escalation triggers (Opus → Fable 5)
+## Fable 5 routing (access-gated, auto-switch 2026-06-23)
 
-Fable 5 (`claude-fable-5`, launched 2026-06-09, 2× Opus price) is escalation-only — never a baseline:
+Fable 5 (`claude-fable-5`, launched 2026-06-09, 2× Opus price) runs in two configurations via `resolveFableAccess()` (`CMAX_FABLE_ACCESS=included|credits` overrides):
 
-- `--long-horizon` on `plan` / `debug-hard` — work larger than a single sitting (overnight runs, multi-day converge loops, ambiguous root-cause hunts)
-- explicit `--tier fable`
-- NEVER for security domains (Fable's safety classifiers fall back to Opus anyway; headless requests get refusals) and NEVER for `verify`/`spec`/`architect` (pinned to Opus)
-- after 2026-06-22 Fable bills to usage credits on Max — the route reason flags this
+- **included** (now → 2026-06-22, free on Max): `plan` baselines to Fable; multispec decompose runs on Fable; `--long-horizon` escalates `plan`/`debug-hard` (overnight runs, multi-day converge loops, ambiguous root-cause hunts)
+- **credits** (2026-06-23 →, bills usage credits): all Fable defaults auto-demote to Opus; only explicit `--tier fable` / `cmax loop run --fable` reaches Fable
+- in BOTH: NEVER for security domains (clamps to Opus — Fable's safety classifiers fall back there anyway; headless requests end the turn) and NEVER for `verify`/`spec`/`architect` (pinned to Opus)
 
 ## Demotion triggers (Fable/Opus → cheaper)
 

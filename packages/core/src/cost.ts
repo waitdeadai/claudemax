@@ -1,5 +1,5 @@
 import { MODELS } from "./models.js";
-import type { BillingEra, ModelTier, Plan } from "./types.js";
+import type { BillingEra, FableAccess, ModelTier, Plan } from "./types.js";
 import { BILLING_SPLIT_CUTOVER_ISO, FABLE_INCLUDED_UNTIL_ISO } from "./types.js";
 
 // Auto-resolve the billing era from the current date. Anthropic's announced
@@ -21,6 +21,18 @@ export function resolveBillingEra(now: Date = new Date()): BillingEra {
 // surfacing Fable routing decisions should warn when this returns true.
 export function fableOnUsageCredits(now: Date = new Date()): boolean {
   return now.getTime() > Date.parse(FABLE_INCLUDED_UNTIL_ISO);
+}
+
+// Auto-resolve whether the router should run its Fable defaults. Mirrors
+// resolveBillingEra(): date-based with an env override in BOTH directions —
+// CMAX_FABLE_ACCESS=included re-enables the Fable defaults after the cutover
+// (e.g. when Anthropic folds Fable into the subscription/credit pool properly);
+// CMAX_FABLE_ACCESS=credits demotes them early. Also settable via
+// `cmax config set fableAccess <included|credits>`-style env plumbing.
+export function resolveFableAccess(now: Date = new Date()): FableAccess {
+  const override = process.env["CMAX_FABLE_ACCESS"];
+  if (override === "included" || override === "credits") return override;
+  return fableOnUsageCredits(now) ? "credits" : "included";
 }
 
 export interface UsageEstimate {

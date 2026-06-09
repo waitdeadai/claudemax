@@ -2,6 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import {
   MODELS,
   parseSpec,
+  resolveFableAccess,
   type MultiSpec,
   type ParallelMode,
   type ResearchBrief,
@@ -134,10 +135,18 @@ export async function decomposeIntoMultiSpec(
   let finalResult = "";
   let structured: Record<string, unknown> | null = null;
 
+  // Decompose on Fable 5 while it's included on Max (through 2026-06-22) —
+  // decomposition quality propagates to every downstream packet. Auto-reverts
+  // to Opus when Fable bills usage credits; flip via CMAX_FABLE_ACCESS.
+  const decomposeModel =
+    resolveFableAccess() === "included" ? MODELS.fable.id : MODELS.opus.id;
+
   for await (const message of query({
     prompt: userMsg,
     options: {
-      model: MODELS.opus.id,
+      model: decomposeModel,
+      fallbackModel:
+        decomposeModel === MODELS.fable.id ? MODELS.opus.id : MODELS.sonnet.id,
       systemPrompt: {
         type: "preset",
         preset: "claude_code",

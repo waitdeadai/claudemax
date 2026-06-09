@@ -45,6 +45,15 @@ export const BILLING_SPLIT_CUTOVER_ISO = "2026-06-15T00:00:00Z";
 // (anthropic.com/news/claude-fable-5-mythos-5, accessed 2026-06-09).
 export const FABLE_INCLUDED_UNTIL_ISO = "2026-06-22T23:59:59Z";
 
+// "included" — Fable costs nothing extra on the subscription: the router runs
+// its Fable defaults (plan baseline, long-horizon escalation, Fable decompose).
+// "credits" — Fable bills to usage credits: the router auto-demotes every
+// Fable default back to the Opus configuration; only explicit opt-in
+// (--tier fable, cmax loop run --fable) reaches Fable. Auto-resolved by date
+// (cutover 2026-06-23), overridable either way via CMAX_FABLE_ACCESS so the
+// two configurations can be switched back and forth.
+export type FableAccess = "included" | "credits";
+
 export interface PlanInfo {
   readonly plan: Plan;
   readonly billing: BillingMode;

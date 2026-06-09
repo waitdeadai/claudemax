@@ -14,8 +14,11 @@ function sig(over: Partial<TaskSignal> = {}): TaskSignal {
 describe("router — plan-aware cost guard (post-split era)", () => {
   // The plan-budget demote path only exists in the post-split era. Tests pin
   // era explicitly so they remain valid both today (pre-split) and after
-  // 2026-06-15 when the harness auto-resolves to post-split.
-  const POST = { era: "post-split" as const };
+  // 2026-06-15 when the harness auto-resolves to post-split. fableAccess is
+  // pinned to "credits" so the plan baseline stays opus — these tests exercise
+  // the budget ladder, not the Fable-window defaults (router.test.ts covers
+  // those with fableAccess: "included").
+  const POST = { era: "post-split" as const, fableAccess: "credits" as const };
 
   it("ok zone (<70%) does not demote", () => {
     const d = route(sig({ class: "plan" }), { plan: "max5x", creditConsumedUsd: 30, ...POST });
@@ -75,6 +78,7 @@ describe("router — pre-split era (today, until 2026-06-15)", () => {
       plan: "max5x",
       creditConsumedUsd: 99,
       era: "pre-split",
+      fableAccess: "credits",
     });
     expect(d.tier).toBe("opus");
     expect(d.demoted).toBe(false);

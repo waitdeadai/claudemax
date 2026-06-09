@@ -1,7 +1,7 @@
 import { MODELS } from "./models.js";
 import { budgetTag, estimatePacketCost } from "./cost.js";
-import { resolveBillingEra } from "./cost.js";
-import type { BillingEra } from "./types.js";
+import { resolveBillingEra, resolveFableAccess } from "./cost.js";
+import type { BillingEra, FableAccess } from "./types.js";
 import type {
   ModelTier,
   Plan,
@@ -10,8 +10,16 @@ import type {
   TaskSignal,
 } from "./types.js";
 
+// plan baselines to Fable 5 (decision 2026-06-09, effectiveness-first):
+// decomposition quality propagates to every downstream packet, and "the most
+// demanding reasoning" is exactly what Anthropic positions Fable for. ACTIVE
+// ONLY while fableAccess === "included" (free on Max through 2026-06-22) —
+// after the cutover route() auto-demotes this baseline to Opus until Fable is
+// folded back in (override: CMAX_FABLE_ACCESS=included). The envelope is
+// further protected by the ladder — budget guard demotes fable→opus,
+// danger/forceCheap→sonnet — and security domains clamp to Opus.
 const BASELINE_TIER: Readonly<Record<TaskClass, ModelTier>> = {
-  plan: "opus",
+  plan: "fable",
   architect: "opus",
   spec: "opus",
   verify: "opus",
@@ -75,14 +83,12 @@ const NEVER_DEMOTE: ReadonlySet<TaskClass> = new Set([
   "architect",
 ]);
 
-// Fable 5 (launched 2026-06-09) is a fourth tier ABOVE Opus, not a new default:
-// Anthropic's own selection matrix keeps Opus/Sonnet/Haiku as the three rows and
-// positions Fable as the escalation for "the most demanding reasoning and
-// long-horizon agentic tasks" (platform.claude.com choosing-a-model +
-// code.claude.com model-config, accessed 2026-06-09). Baselines stay untouched;
-// Fable is reachable only via signal.longHorizon on these judgment classes, or
-// an explicit tier override. verify/spec/architect stay PINNED to Opus by house
-// rule #4 — neither demoted nor auto-escalated (use --tier fable to override).
+// Fable 5 (launched 2026-06-09) is a fourth tier ABOVE Opus. Besides the plan
+// baseline, it is reachable via signal.longHorizon on these judgment classes or
+// an explicit tier override ("long-horizon agentic tasks" per
+// platform.claude.com choosing-a-model + code.claude.com model-config, accessed
+// 2026-06-09). verify/spec/architect stay PINNED to Opus by house rule #4 —
+// neither demoted nor auto-escalated (use --tier fable to override).
 const LONG_HORIZON_FABLE: ReadonlySet<TaskClass> = new Set([
   "plan",
   "debug-hard",
@@ -98,12 +104,22 @@ export interface RouterOptions {
   // and "post-split" after. In pre-split era the plan-budget demote path is a
   // no-op because the monthly Agent SDK credit envelope doesn't exist yet.
   readonly era?: BillingEra;
+  // Defaults to resolveFableAccess(): "included" through 2026-06-22 (Fable free
+  // on Max → Fable defaults active), "credits" after (Fable defaults demote to
+  // the Opus configuration; explicit tier still reaches Fable). Override either
+  // way via CMAX_FABLE_ACCESS to switch the two configurations back and forth.
+  readonly fableAccess?: FableAccess;
 }
 
 export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecision {
-  const baseline = BASELINE_TIER[signal.class];
-  let tier: ModelTier = baseline;
+  const fableOn = (opts.fableAccess ?? resolveFableAccess()) === "included";
+  let baseline = BASELINE_TIER[signal.class];
   const reasons: string[] = [`baseline ${signal.class}→${baseline}`];
+  if (baseline === "fable" && !fableOn) {
+    baseline = "opus";
+    reasons.push("fable-access=credits→opus (Fable bills usage credits; re-enable via CMAX_FABLE_ACCESS=included)");
+  }
+  let tier: ModelTier = baseline;
   let escalated = false;
   let demoted = false;
 
@@ -133,21 +149,21 @@ export function route(signal: TaskSignal, opts: RouterOptions = {}): RouteDecisi
         reasons.push(`security-domain=${signal.domain}→opus`);
       }
     }
-    // Security domains stay on Opus even when long-horizon: Fable's safety
-    // classifiers fall back to Opus 4.8 on cybersecurity-shaped requests anyway,
-    // and in SDK/headless mode a flagged request ends the turn with a refusal
-    // (code.claude.com/docs/en/model-config, accessed 2026-06-09).
-    const securityDomain =
-      signal.domain != null && SECURITY_DOMAINS.has(signal.domain.toLowerCase());
-    if (
-      tier === "opus" &&
-      signal.longHorizon &&
-      LONG_HORIZON_FABLE.has(signal.class) &&
-      !securityDomain
-    ) {
+    if (fableOn && tier === "opus" && signal.longHorizon && LONG_HORIZON_FABLE.has(signal.class)) {
       tier = "fable";
       escalated = true;
       reasons.push(`long-horizon ${signal.class}→fable (2× opus; usage-credit billed after 2026-06-22)`);
+    }
+    // Security domains never run on Fable (baseline or escalated): its safety
+    // classifiers fall back to Opus 4.8 on cybersecurity-shaped requests anyway,
+    // and in SDK/headless mode a flagged request ends the turn with a refusal
+    // (code.claude.com/docs/en/model-config, accessed 2026-06-09). Explicit
+    // --tier fable bypasses this clamp — documented risk, user's judgment.
+    const securityDomain =
+      signal.domain != null && SECURITY_DOMAINS.has(signal.domain.toLowerCase());
+    if (tier === "fable" && securityDomain) {
+      tier = "opus";
+      reasons.push(`security-domain=${signal.domain} clamps fable→opus (headless refusal risk)`);
     }
   }
 
