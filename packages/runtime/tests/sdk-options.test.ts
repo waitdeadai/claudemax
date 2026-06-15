@@ -4,7 +4,13 @@ import {
   buildOtelEnv,
   estimateTaskBudgetTokens,
   parseUsageWithCache,
+  TASK_BUDGET_BETA,
 } from "../src/sdk-options.js";
+import {
+  buildContextEditingConfig,
+  buildMemoryToolConfig,
+  MEMORY_TOOL_BETA,
+} from "../src/context-engineering.js";
 
 describe("buildOtelEnv", () => {
   const savedEnv = { ...process.env };
@@ -170,5 +176,208 @@ describe("baseSdkOptions env (sub-session Bash PATH fix)", () => {
     >;
     expect(env["CMAX_TEST_OVERLAY"]).toBe("yes");
     expect(env["PATH"]).toBe(process.env["PATH"]);
+  });
+});
+
+// [s3-cc1] Context editing + memory tool: OFF by default
+describe("baseSdkOptions context-engineering: OFF by default", () => {
+  it("produces no context_management key when contextEditing is absent", () => {
+    expect(baseSdkOptions({})["context_management"]).toBeUndefined();
+  });
+
+  it("produces no context_management key when contextEditing is false", () => {
+    expect(baseSdkOptions({ contextEditing: false })["context_management"]).toBeUndefined();
+  });
+
+  it("does not add memory_20250818 beta when memoryTool is absent", () => {
+    const betas = baseSdkOptions({})["betas"] as string[] | undefined;
+    expect(betas).toBeUndefined();
+  });
+
+  it("does not add memory_20250818 beta when memoryTool is false", () => {
+    const betas = baseSdkOptions({ memoryTool: false })["betas"] as string[] | undefined;
+    expect(betas).toBeUndefined();
+  });
+
+  it("output is byte-identical to previous behavior when no new flags are set", () => {
+    const out = baseSdkOptions({});
+    expect(out["context_management"]).toBeUndefined();
+    expect(out["betas"]).toBeUndefined();
+    // existing defaults still present
+    expect(out["effort"]).toBe("xhigh");
+    expect(out["skills"]).toBe("all");
+    expect(out["settingSources"]).toEqual(["user", "project"]);
+  });
+});
+
+// [s3-cc2] Context editing + memory tool: opt-in paths
+// Both builders now gate on CMAX_CONTEXT_ENGINEERING env (in addition to the
+// contextEditing/memoryTool flags in opts). Set the env in beforeEach so the
+// opt-in tests exercise the enabled path.
+describe("baseSdkOptions context-engineering: opt-in", () => {
+  const CE_ENV = "CMAX_CONTEXT_ENGINEERING";
+  beforeEach(() => {
+    process.env[CE_ENV] = "1";
+  });
+  afterEach(() => {
+    delete process.env[CE_ENV];
+  });
+
+  it("attaches context_management with edit.protected containing grounding tools when contextEditing:true", () => {
+    const out = baseSdkOptions({ contextEditing: true });
+    const cm = out["context_management"] as { edit: { protected: string[] } };
+    expect(cm).toBeDefined();
+    expect(cm.edit).toBeDefined();
+    expect(Array.isArray(cm.edit.protected)).toBe(true);
+    expect(cm.edit.protected).toContain("mcp__memory__memory_search");
+    expect(cm.edit.protected).toContain("mcp__memory__memory_get_decision");
+    expect(cm.edit.protected).toContain("mcp__memory__memory_get_fact");
+    expect(cm.edit.protected).toContain("mcp__memory__memory_stale");
+  });
+
+  it("adds memory_20250818 beta when memoryTool:true", () => {
+    const out = baseSdkOptions({ memoryTool: true });
+    const betas = out["betas"] as string[];
+    expect(Array.isArray(betas)).toBe(true);
+    expect(betas).toContain(MEMORY_TOOL_BETA);
+  });
+
+  it("preserves TASK_BUDGET_BETA when memoryTool:true is combined with taskBudgetTokens", () => {
+    const out = baseSdkOptions({ memoryTool: true, taskBudgetTokens: 50_000 });
+    const betas = out["betas"] as string[];
+    expect(betas).toContain(MEMORY_TOOL_BETA);
+    expect(betas).toContain(TASK_BUDGET_BETA);
+  });
+
+  it("contextKind is accepted without changing the protected structure", () => {
+    const out = baseSdkOptions({ contextEditing: true, contextKind: "grounding" });
+    const cm = out["context_management"] as { edit: { protected: string[] } };
+    expect(cm.edit.protected).toContain("mcp__memory__memory_search");
+  });
+
+  it("taskBudget is still set when both taskBudgetTokens and memoryTool are active", () => {
+    const out = baseSdkOptions({ memoryTool: true, taskBudgetTokens: 20_000 });
+    expect(out["taskBudget"]).toEqual({ total: 20_000 });
+  });
+});
+
+// [prc-error-handling] Graceful failure modes
+describe("baseSdkOptions context-engineering: error handling", () => {
+  it("does not throw when contextEditing:true and contextKind is empty string", () => {
+    expect(() => baseSdkOptions({ contextEditing: true, contextKind: "" })).not.toThrow();
+  });
+
+  it("does not throw when contextEditing:true and contextKind is undefined", () => {
+    expect(() => baseSdkOptions({ contextEditing: true, contextKind: undefined })).not.toThrow();
+  });
+
+  it("does not throw when both memoryTool and contextEditing are true with no other options", () => {
+    expect(() => baseSdkOptions({ memoryTool: true, contextEditing: true })).not.toThrow();
+  });
+
+  it("does not throw when all new flags are combined with unrelated options", () => {
+    expect(() =>
+      baseSdkOptions({
+        memoryTool: true,
+        contextEditing: true,
+        contextKind: "grounding",
+        taskBudgetTokens: 20_000,
+        effort: "max",
+      }),
+    ).not.toThrow();
+  });
+});
+
+// [prc-edge-cases] Edge and boundary cases
+// Tests that need the memory beta to be present must set CMAX_CONTEXT_ENGINEERING=1.
+describe("baseSdkOptions context-engineering: edge cases", () => {
+  const CE_ENV = "CMAX_CONTEXT_ENGINEERING";
+  afterEach(() => {
+    delete process.env[CE_ENV];
+  });
+
+  it("betas array has no duplicates when memoryTool:true is set with env", () => {
+    process.env[CE_ENV] = "1";
+    const out = baseSdkOptions({ memoryTool: true });
+    const betas = out["betas"] as string[];
+    const unique = new Set(betas);
+    expect(unique.size).toBe(betas.length);
+  });
+
+  it("context_management is not set when contextEditing is falsy (0, null-like)", () => {
+    // TypeScript prevents passing 0/null here, but a plain false covers the gate
+    expect(baseSdkOptions({ contextEditing: false })["context_management"]).toBeUndefined();
+  });
+
+  it("betas contains only memory beta (not TASK_BUDGET_BETA) when only memoryTool is set", () => {
+    process.env[CE_ENV] = "1";
+    const out = baseSdkOptions({ memoryTool: true });
+    const betas = out["betas"] as string[];
+    expect(betas).not.toContain(TASK_BUDGET_BETA);
+    expect(betas).toContain(MEMORY_TOOL_BETA);
+  });
+
+  it("betas is absent (not an empty array) when neither flag is active", () => {
+    // Must be undefined, not [], so downstream spread callers don't see an
+    // unexpected empty betas key.
+    expect(baseSdkOptions({})["betas"]).toBeUndefined();
+  });
+});
+
+// context-engineering.ts unit tests — updated for off-by-default behavior
+describe("buildMemoryToolConfig (unit)", () => {
+  const CE_ENV = "CMAX_CONTEXT_ENGINEERING";
+  afterEach(() => {
+    delete process.env[CE_ENV];
+  });
+
+  it("returns empty array (no betas) when env is not set", () => {
+    delete process.env[CE_ENV];
+    const betas = buildMemoryToolConfig();
+    expect(betas).toHaveLength(0);
+    expect(betas).not.toContain(MEMORY_TOOL_BETA);
+  });
+
+  it("returns the memory_20250818 beta string when env=1", () => {
+    process.env[CE_ENV] = "1";
+    const betas = buildMemoryToolConfig();
+    expect(betas).toContain(MEMORY_TOOL_BETA);
+    expect(betas.length).toBeGreaterThan(0);
+  });
+});
+
+describe("buildContextEditingConfig (unit)", () => {
+  const CE_ENV = "CMAX_CONTEXT_ENGINEERING";
+  afterEach(() => {
+    delete process.env[CE_ENV];
+  });
+
+  it("returns undefined when env is not set", () => {
+    delete process.env[CE_ENV];
+    expect(buildContextEditingConfig()).toBeUndefined();
+  });
+
+  it("returns an edit.protected array with all four grounding tools when env=1", () => {
+    process.env[CE_ENV] = "1";
+    const cfg = buildContextEditingConfig();
+    const ed = cfg!["edit"] as { protected: string[] };
+    expect(ed.protected).toContain("mcp__memory__memory_search");
+    expect(ed.protected).toContain("mcp__memory__memory_get_decision");
+    expect(ed.protected).toContain("mcp__memory__memory_get_fact");
+    expect(ed.protected).toContain("mcp__memory__memory_stale");
+  });
+
+  it("accepts any contextKind string without throwing", () => {
+    expect(() => buildContextEditingConfig("grounding")).not.toThrow();
+    expect(() => buildContextEditingConfig("")).not.toThrow();
+    expect(() => buildContextEditingConfig(undefined)).not.toThrow();
+  });
+
+  it("does not mutate the internal GROUNDING_TOOLS list across calls", () => {
+    process.env[CE_ENV] = "1";
+    const first = buildContextEditingConfig() as { edit: { protected: string[] } };
+    first.edit.protected.push("injected");
+    const second = buildContextEditingConfig() as { edit: { protected: string[] } };
+    expect(second.edit.protected).not.toContain("injected");
   });
 });

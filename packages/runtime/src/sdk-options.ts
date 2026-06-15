@@ -6,6 +6,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ModelTier } from "@claudemax/core";
 import { MODELS } from "@claudemax/core";
+import { buildContextEditingConfig, buildMemoryToolConfig } from "./context-engineering.js";
 
 export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
@@ -47,6 +48,17 @@ export interface BaseQueryOptions {
   // assistant's messages, not an autonomous worker; enforcement for workers lives
   // in the separate, blind, decomposed verify, not in the build loop.
   readonly settingSources?: readonly string[];
+  // Opt-in to Anthropic's context-editing pass (context_management edit block).
+  // OFF by default. When true, baseSdkOptions attaches a context_management
+  // block that protects grounding tool results from being cleared. contextKind
+  // is a reserved tag carried through to buildContextEditingConfig for future
+  // protection variants.
+  readonly contextEditing?: boolean;
+  readonly contextKind?: string;
+  // Opt-in to the Anthropic file-based memory tool (memory_20250818 beta).
+  // OFF by default. When true, baseSdkOptions merges memory_20250818 into
+  // out['betas'] alongside (not clobbering) any existing betas.
+  readonly memoryTool?: boolean;
 }
 
 // OTEL conventions per https://opentelemetry.io/docs/specs/semconv/
@@ -113,9 +125,19 @@ export function baseSdkOptions(o: BaseQueryOptions = {}): Record<string, unknown
   if (o.includeHookEvents) out["includeHookEvents"] = true;
   if (o.strictMcpConfig) out["strictMcpConfig"] = true;
   if (o.sessionStoreFlush) out["sessionStoreFlush"] = o.sessionStoreFlush;
+  const betas: string[] = [];
   if (o.taskBudgetTokens !== undefined) {
-    out["betas"] = [TASK_BUDGET_BETA];
+    betas.push(TASK_BUDGET_BETA);
     out["taskBudget"] = { total: o.taskBudgetTokens };
+  }
+  if (o.memoryTool) {
+    betas.push(...buildMemoryToolConfig());
+  }
+  if (betas.length) {
+    out["betas"] = betas;
+  }
+  if (o.contextEditing) {
+    out["context_management"] = buildContextEditingConfig(o.contextKind);
   }
   if (o.memoryPath) {
     // Wire Anthropic's file-based Memory tool. The SDK option key is stable

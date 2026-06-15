@@ -16,6 +16,7 @@ import { runGoal, type GoalRunResult } from "./goal.js";
 import { verify } from "./verify.js";
 import { writeSpec } from "./spec-writer.js";
 import type { EffortLevel } from "./sdk-options.js";
+import { CE_PROTECTED_TOOLS, type LoopContextEngineeringOpts } from "./context-engineering.js";
 
 // Archetype A — the converge-loop made first-class (docs/LOOP_MODE_PLAN.md §6A).
 // Drives one Spec to DONE via repeated fresh-context ITERATE→VERIFY passes, with
@@ -38,8 +39,22 @@ export interface ConvergeLoopOptions {
   readonly stateDir?: string; // checkpoint dir (default .claudemax/state/loop)
   readonly abortSignal?: AbortSignal;
   readonly onPass?: (pass: LoopPass, action: LoopAction, reason: string) => void;
+  // Opt-in to Anthropic's native context engineering for ITERATE passes. OFF by
+  // default — when false/absent the loop options are byte-identical to pre-S4b
+  // behavior (no context_management, no memory_20250818 beta). When true, the
+  // default iterate closure passes contextEngineering:true to runGoal so the
+  // context-editing pass + memory-tool beta activate on the ITERATE path only.
+  // The verifyFn closure is never modified — verify stays excluded (Opus, clean).
+  readonly contextEngineering?: boolean;
   // Injection points (production leaves undefined → live SDK). Tests pass fakes.
-  readonly iterateFn?: (spec: Spec, remainingUsd: number) => Promise<GoalRunResult>;
+  // ceOpts (3rd arg) is undefined when contextEngineering is not set and defined
+  // with the active protection config when contextEngineering:true. verifyFn
+  // never receives ceOpts — its signature stays (spec) with no CE signal.
+  readonly iterateFn?: (
+    spec: Spec,
+    remainingUsd: number,
+    ceOpts: LoopContextEngineeringOpts | undefined,
+  ) => Promise<GoalRunResult>;
   readonly verifyFn?: (spec: Spec) => Promise<VerificationReport>;
   // Respec rebuilds the Spec from the failing conditions. Undefined → the live
   // default (re-run the spec writer with the failure evidence appended).
@@ -80,6 +95,17 @@ export async function runConvergeLoop(
   mkdirSync(stateDir, { recursive: true });
   const checkpointPath = join(stateDir, `${slug(inputSpec.title)}.converge.json`);
 
+  // Build CE opts once for the whole run; undefined when contextEngineering is off.
+  // The memoryPath gives per-run isolation so cross-pass memory doesn't bleed between
+  // specs. Use a spread of CE_PROTECTED_TOOLS so each run owns its own array and
+  // external mutation (e.g. test assertions) cannot affect subsequent runs.
+  const ceOpts: LoopContextEngineeringOpts | undefined = opts.contextEngineering
+    ? {
+        memoryPath: join(stateDir, "ce-memory"),
+        protectedTools: [...CE_PROTECTED_TOOLS],
+      }
+    : undefined;
+
   const iterate =
     opts.iterateFn ??
     // remainingUsd is exposed to custom iterateFns, but the default does NOT forward
@@ -88,7 +114,7 @@ export async function runConvergeLoop(
     // "400 This model does not support user-configurable task budgets". The credit
     // ceiling is enforced one level up at decideNext() (stop-budget) from the
     // per-pass token accounting, so the per-pass SDK budget is redundant anyway.
-    ((spec: Spec, _remainingUsd: number) =>
+    ((spec: Spec, _remainingUsd: number, ce: LoopContextEngineeringOpts | undefined) =>
       runGoal(spec, {
         cwd: opts.cwd,
         model: execModel,
@@ -99,6 +125,8 @@ export async function runConvergeLoop(
         // Fresh context per pass (Ralph-style, P3): no `resume` — each ITERATE
         // re-reads the SPEC + on-disk state rather than carrying a long, rotting
         // session. The verdict artifact, not session memory, is the continuity.
+        // Forward CE only when opted in; verify never receives it (see verifyFn).
+        contextEngineering: ce !== undefined,
       }));
 
   const verifyFn =
@@ -127,7 +155,7 @@ export async function runConvergeLoop(
 
   while (true) {
     const remainingUsd = maxCreditUsd - totalCreditUsd;
-    const goal = await iterate(spec, remainingUsd);
+    const goal = await iterate(spec, remainingUsd, ceOpts);
     const creditThisPass = estimateUsd(goal.tokensIn, goal.tokensOut, execModel);
     totalCreditUsd += creditThisPass;
 

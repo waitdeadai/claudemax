@@ -37,3 +37,5 @@ export * from "./pipeline-loop.js";
 export * from "./loop-ledger.js";
 export * from "./loop-budget.js";
 export * from "./standing-loop.js";
+export { digestReadOutput, undigestReadOutput, isReadDigest } from "./read-digest.js";
+export * from "./context-engineering.js";

@@ -46,6 +46,11 @@ export interface PipelineLoopOptions {
   readonly abortSignal?: AbortSignal;
   readonly onPhase?: (msg: string) => void;
   readonly onPass?: (pass: LoopPass, action: LoopAction, reason: string) => void;
+  // Opt-in to context engineering on the ITERATE goalFn calls. OFF by default.
+  // When true, each sub-Spec runGoal call receives contextEngineering:true so
+  // the context-editing pass + memory-tool beta activate. verifyRollupFn is
+  // never modified — verify stays excluded (Opus, clean).
+  readonly contextEngineering?: boolean;
   // Injection points (production leaves undefined → live SDK). Tests pass fakes.
   readonly researchFn?: (goal: string) => Promise<ResearchBrief | undefined>;
   readonly decomposeFn?: (goal: string, brief: ResearchBrief | undefined) => Promise<MultiSpec>;
@@ -95,6 +100,8 @@ export async function runPipelineLoop(
         effort: opts.effort,
         env: opts.env,
         abortSignal: opts.abortSignal,
+        // Forward CE only when opted in; verifyRollupFn is never affected.
+        contextEngineering: opts.contextEngineering,
       }));
   const verifyRollupFn =
     opts.verifyRollupFn ??

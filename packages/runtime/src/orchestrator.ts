@@ -28,6 +28,14 @@ export interface DispatchOptions {
   readonly plan?: Plan;
   readonly creditConsumedUsd?: number;
   readonly effort?: EffortLevel;
+  /**
+   * Opt-in to Anthropic's native context engineering (context-editing pass +
+   * memory-tool beta). OFF by default — no context_management key and no
+   * memory_20250818 beta appear in the SDK options unless this is true.
+   */
+  readonly contextEngineering?: boolean;
+  /** Injection point for tests. Production leaves undefined → live SDK query(). */
+  readonly queryFn?: typeof query;
 }
 
 export interface ParallelCap {
@@ -118,10 +126,15 @@ async function runPacket(
     // cap). Don't load settings-file hooks for an autonomous worker; enforcement is
     // the separate blind verify, not tone-policing the build loop.
     settingSources: [],
+    // Context engineering is OFF by default; enabled together (contextEditing +
+    // memoryTool) when the caller opts in via contextEngineering:true.
+    contextEditing: opts.contextEngineering,
+    memoryTool: opts.contextEngineering,
   });
 
+  const q = opts.queryFn ?? query;
   try {
-    for await (const message of query({
+    for await (const message of q({
       prompt: `Execute packet: ${packet.title}\n\nInputs:\n${packet.inputs.map((i) => "- " + i).join("\n") || "(none)"}\n\nExpected outputs:\n${packet.outputs.map((o) => "- " + o).join("\n") || "(none)"}`,
       options: {
         model: decision.model,

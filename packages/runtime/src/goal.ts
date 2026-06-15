@@ -24,6 +24,15 @@ export interface GoalRunOptions {
   readonly env?: Record<string, string>;
   readonly abortSignal?: AbortSignal;
   readonly resume?: string;
+  /**
+   * Opt-in to Anthropic's native context engineering (context-editing pass +
+   * memory-tool beta). OFF by default — no context_management key and no
+   * memory_20250818 beta appear in the SDK options unless this is true.
+   * When true, baseSdkOptions receives contextEditing:true + memoryTool:true,
+   * which attaches the context_management edit block (grounding + evidence
+   * protected) and adds memory_20250818 to betas.
+   */
+  readonly contextEngineering?: boolean;
   /** Injection point for tests. Production leaves undefined → live SDK query(). */
   readonly queryFn?: typeof query;
 }
@@ -88,6 +97,11 @@ export async function runGoal(spec: Spec, opts: GoalRunOptions = {}): Promise<Go
     // separate blind verify, not by tone hooks. The memory MCP is wired inline via
     // mcpServers below, so dropping settings does not lose grounding.
     settingSources: [],
+    // Context engineering is OFF by default; both gates (contextEditing +
+    // memoryTool) are enabled together so the context_management edit block
+    // and the memory_20250818 beta appear in the SDK options simultaneously.
+    contextEditing: opts.contextEngineering,
+    memoryTool: opts.contextEngineering,
   });
 
   const q = opts.queryFn ?? query;

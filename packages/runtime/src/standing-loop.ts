@@ -257,6 +257,11 @@ export interface DefaultDepsOptions {
   // Run deepresearch inside each item's pipeline ACT (default true). Set false for
   // cheaper/faster ticks when the intent doesn't need fresh web research per item.
   readonly research?: boolean;
+  // Opt-in to context engineering on the ACT path. OFF by default. When true,
+  // each item's runPipelineLoop receives contextEngineering:true so the
+  // context-editing pass + memory-tool beta activate on the ITERATE goal calls.
+  // The verify inside the pipeline loop is never affected (verify stays excluded).
+  readonly contextEngineering?: boolean;
 }
 
 export function defaultStandingLoopDeps(
@@ -270,6 +275,8 @@ export function defaultStandingLoopDeps(
       // ACT = the full effective pipeline per item (deepresearch + multispec
       // decompose + parallel /goal + blind rollup verify), looped to convergence.
       // The blind rollup verify is the source of truth — never the executor's claim.
+      // contextEngineering is forwarded to the pipeline loop's goalFn only; the
+      // rollup verifyRollupFn inside runPipelineLoop is never affected (verify excluded).
       const r = await runPipelineLoop(item.goal, {
         cwd: opts.cwd,
         research: opts.research ?? true,
@@ -277,6 +284,7 @@ export function defaultStandingLoopDeps(
         model: opts.model,
         effort: opts.effort,
         env: opts.env,
+        contextEngineering: opts.contextEngineering,
       });
       return { finalAction: r.finalAction, totalCreditUsd: r.totalCreditUsd, lastReport: r.rollup };
     },

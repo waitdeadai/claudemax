@@ -9,6 +9,14 @@ export interface OvernightOptions {
   readonly maxTurns?: number;
   readonly stateDir?: string;
   readonly onCheckpoint?: (turn: number, sessionId: string | undefined) => void;
+  /**
+   * Opt-in to Anthropic's native context engineering (context-editing pass +
+   * memory-tool beta). OFF by default. When true, forwarded to every runGoal
+   * call so that each overnight session benefits from context compression.
+   */
+  readonly contextEngineering?: boolean;
+  /** Injection point for tests. Production leaves undefined → live runGoal(). */
+  readonly goalFn?: typeof runGoal;
 }
 
 export interface OvernightCheckpoint {
@@ -50,6 +58,7 @@ export async function runOvernight(
   }
 
   let lastResult: GoalRunResult | undefined;
+  const gfn = opts.goalFn ?? runGoal;
 
   while (true) {
     if (totalCreditUsd >= opts.budgetCreditsUsd) {
@@ -57,11 +66,12 @@ export async function runOvernight(
     }
 
     const remainingBudget = opts.budgetCreditsUsd - totalCreditUsd;
-    lastResult = await runGoal(spec, {
+    lastResult = await gfn(spec, {
       cwd: opts.cwd,
       maxTurns: opts.maxTurns,
       maxBudgetUsd: remainingBudget,
       resume: resumeId,
+      contextEngineering: opts.contextEngineering,
     });
 
     const usedThisRun = estimateUsd(lastResult.tokensIn, lastResult.tokensOut);
